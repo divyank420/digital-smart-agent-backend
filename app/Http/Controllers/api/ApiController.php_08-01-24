@@ -1,0 +1,304 @@
+<?php
+
+namespace App\Http\Controllers\api;
+
+use App\Helper\Helper;
+use App\Http\Controllers\Controller;
+use App\Models\SavingDenomination;
+use App\Models\SavingCustomer;
+use App\Models\SavingCompany;
+use App\Models\SavingExpenses;
+use App\Models\SavingRm;
+use App\Models\SavingRmEntries;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Crypt;
+use JWTAuth;
+use Auth;
+use Validator;
+use Config;
+
+class ApiController extends Controller
+{
+    public function register (Request $request){
+        $requestData = $request->all();
+        try {
+            $validator = Validator::make($request->all(), [
+                'agent_name' => 'required',
+                'name' => 'required',
+                'email' => 'required',
+                'mobile' => 'required',
+                'password' => 'required',
+            ]);
+            if ($validator->fails()) {
+                $error = Helper::ValidationSet($validator->errors());
+            }
+            $requestData['status'] = 1;
+            $requestData['role'] = 'Owner';
+            $requestData['password'] = Hash::make(str_replace(' ','',$requestData['password']));
+            $requestData['username'] = explode(' ',$requestData['name'])[0];
+            $company = SavingCompany::create($requestData);
+            $requestData['company_id'] = $company->id;
+            $user = User::Create($requestData);
+            return Helper::sendResponse('Registration Complated.',200);
+        } catch (Exception $e) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+
+    public function login(Request $request)
+    {
+        $requestData = $request->all();
+        try {
+            $credentials = $request->only('mobile', 'password');
+            
+            $guard = 'web';
+            $guard = 'users';
+            $token = Auth::guard('users')->attempt(['mobile' => $request->mobile, 'password' => $request->password]);
+            if(!$token){
+
+                $guard = 'customer';
+                $token = Auth::guard('customer')->attempt(['mobile' => $request->mobile, 'password' => $request->password]);
+            }
+            try {
+                //if (! $token = JWTAuth::attempt($credentials)) {
+                if (! $token) {
+                    return Helper::sendResponse('Login credentials are invalid.',400);
+                }
+            } catch (JWTException $e) {
+                return Helper::sendResponse($e->getMessage(),500);
+            }
+            
+            $user = Auth::guard($guard)->user();
+            $agent_lists = User::where('company_id',$user->company_id)->where('id','!=',$user->id)->where('id','!=',1)->pluck('name','id')->toArray();
+            $user->agent_list = $agent_lists;
+            //$user = Auth::user();
+
+            return Helper::sendResponse('Login Successful.',200,['token'=>$token,'userData'=>$user]);
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+
+    public function changePassword(Request $request){
+        
+    }
+
+    public function uploadDenomination(Request $request)
+    {
+        $requestData = $request->all();
+        try {
+            $user = Auth::user();
+            $requestData['company_id'] =  $user->company_id;
+            $requestData['denomination_date'] = date('Y-m-d',strtotime($requestData['denomination_date']))??date('Y-m-d');
+            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id'=>$requestData['company_id']]);
+            if($requestData['user_id'] != '1'){
+                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('user_id',$requestData['user_id']);
+            }
+
+            if(isset($requestData['id']) && !empty($requestData['id'])){
+                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('id',$requestData['id']);
+                unset($requestData['user_id']);
+            }else{
+                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->whereDate('denomination_date',$requestData['denomination_date']);
+            }
+            $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->first();
+            $requestData['total'] = $requestData['online']+($requestData['n_2000']*2000)+($requestData['n_500']*500)+($requestData['n_200']*200)+($requestData['n_100']*100)+($requestData['n_50']*50)+($requestData['n_20']*20)+($requestData['n_10']*10);
+            if(!empty($checkAlreadyAddedDenomination)){
+                if($checkAlreadyAddedDenomination->user_id == $user->id){
+                    if($checkAlreadyAddedDenomination->upload_type == 'edit'){
+                        //$checkAlreadyAddedDenomination->fill($requestData);
+                    }else{
+                    }
+                    $checkAlreadyAddedDenomination->n_2000 += $requestData['n_2000'];
+                    $checkAlreadyAddedDenomination->n_500 += $requestData['n_500'];
+                    $checkAlreadyAddedDenomination->n_200 += $requestData['n_200'];
+                    $checkAlreadyAddedDenomination->n_100 += $requestData['n_100'];
+                    $checkAlreadyAddedDenomination->n_50 += $requestData['n_50'];
+                    $checkAlreadyAddedDenomination->n_20 += $requestData['n_20'];
+                    $checkAlreadyAddedDenomination->n_10 += $requestData['n_10'];
+                    $checkAlreadyAddedDenomination->online += $requestData['online'];
+                    $checkAlreadyAddedDenomination->total = $checkAlreadyAddedDenomination->online+($checkAlreadyAddedDenomination->n_2000*2000)+($checkAlreadyAddedDenomination->n_500*500)+($checkAlreadyAddedDenomination->n_200*200)+($checkAlreadyAddedDenomination->n_100*100)+($checkAlreadyAddedDenomination->n_50*50)+($checkAlreadyAddedDenomination->n_20*20)+($checkAlreadyAddedDenomination->n_10*10);
+
+                    $checkAlreadyAddedDenomination->save();
+
+                }else{
+                    Helper::sendResponse("You cannot update this denomination", 0);
+                }
+            }else{
+                SavingDenomination::create($requestData);
+            }
+
+            Helper::sendResponse("Denomination Successfully Added", 1);
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+    public function updateDenomination(Request $request){
+        try {
+            $requestData = $request->all();
+            if (isset($request->selected_date) && !empty($request->selected_date)) {
+                $selectedDate = date('Y-m-d', strtotime($request->selected_date));
+            }
+            $user = Auth::user();
+
+            $requestData['company_id'] =  $user->company_id;
+            $requestData['denomination_date'] = date('Y-m-d',strtotime($requestData['denomination_date']))??date('Y-m-d');
+            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id'=>$requestData['company_id']])->whereDate('denomination_date',$requestData['denomination_date'])->where('user_id',$user->id)->first();
+
+            if(!empty($checkAlreadyAddedDenomination)){
+                $checkAlreadyAddedDenomination->fill($requestData);
+                $checkAlreadyAddedDenomination->save();
+                Helper::sendResponse('Denomination Updated Successful',1);
+            }else{
+                Helper::sendResponse('Something went wrong');
+            }
+        } catch (Exception $e) {
+            Helper::sendResponse('Something went wrong');
+        }
+    }
+
+    public function denominationDetail(Request $request){
+
+        $selectedDate = date('Y-m-d');
+        $user = Auth::user();
+
+        if (isset($request->selected_date) && !empty($request->selected_date)) {
+            $selectedDate = date('Y-m-d', strtotime($request->selected_date));
+        }
+        //dd($request->all());
+        $request->fetch_type = isset($request->fetch_type)?$request->fetch_type:'daily';
+        $data = SavingDenomination::select([
+            'id',
+            'user_id',
+            'denomination_date',
+            DB::raw('SUM(CASE WHEN online > 0 THEN online ELSE 0 END) as online'),
+            DB::raw('SUM(CASE WHEN n_2000 > 0 THEN n_2000 ELSE 0 END) as n_2000'),
+            DB::raw('SUM(CASE WHEN n_2000 > 0 THEN n_2000*2000 ELSE 0 END) as n_2000_value'),
+            DB::raw('SUM(CASE WHEN n_500 > 0 THEN n_500 ELSE 0 END) as n_500'),
+            DB::raw('SUM(CASE WHEN n_500 > 0 THEN n_500*500 ELSE 0 END) as n_500_value'),
+            DB::raw('SUM(CASE WHEN n_200 > 0 THEN n_200 ELSE 0 END) as n_200'),
+            DB::raw('SUM(CASE WHEN n_200 > 0 THEN n_200*200 ELSE 0 END) as n_200_value'),
+            DB::raw('SUM(CASE WHEN n_100 > 0 THEN n_100 ELSE 0 END) as n_100'),
+            DB::raw('SUM(CASE WHEN n_100 > 0 THEN n_100*100 ELSE 0 END) as n_100_value'),
+            DB::raw('SUM(CASE WHEN n_50 > 0 THEN n_50 ELSE 0 END) as n_50'),
+            DB::raw('SUM(CASE WHEN n_50 > 0 THEN n_50*50 ELSE 0 END) as n_50_value'),
+            DB::raw('SUM(CASE WHEN n_20 > 0 THEN n_20 ELSE 0 END) as n_20'),
+            DB::raw('SUM(CASE WHEN n_20 > 0 THEN n_20*20 ELSE 0 END) as n_20_value'),
+            DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10 ELSE 0 END) as n_10'),
+            DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10*10 ELSE 0 END) as n_10_value'),
+        ])
+        ->where('company_id',$user->company_id)
+        ->whereDate('denomination_date', date('Y-m-d', strtotime($selectedDate)));
+
+        $expenses = SavingExpenses::where(['company_id'=>$user->company_id,'expenses_type'=>'Others'])->whereDate('created_at', date('Y-m-d', strtotime($selectedDate)));;
+
+
+        if($request->fetch_type == 'edit' || $user->role != 'Developer' && (isset($request->fetch_type) && $request->fetch_type != 'report')){
+            $data = $data->where('user_id', $request->user_id);
+            $expenses = $expenses->where('user_id', $request->user_id);
+        }
+
+        
+        $totalExpenses = $expenses->sum('amount');
+        $data = $data->first();
+        if(
+            ($data->online == null || $data->online == 0) &&
+            ($data->n_2000 == null || $data->n_2000 == 0) && 
+            ($data->n_500 == null || $data->n_500 == 0) && 
+            ($data->n_200 == null || $data->n_200 == 0) && 
+            ($data->n_100 == null || $data->n_100 == 0) && 
+            ($data->n_50 == null || $data->n_50 == 0) && 
+            ($data->n_20 == null || $data->n_20 == 0) && 
+            ($data->n_10 == null || $data->n_10 == 0)
+        ){
+            Helper::sendResponse('Denomination not found',0);
+        }else{
+            Helper::sendResponse('Denomination Detail', 1, $data,['total_expenses'=>$totalExpenses]);
+        }
+    }
+    public function rmEntryDetails(Request $request)
+    {
+        $requestData = $request->all();
+        try {
+            $rmEntryList = SavingRm::find($requestData['rm_id']);
+            Helper::sendResponse("Denomination Successfully Added", 1);
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+    public function RmScanCode(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            $code = $request->scan_code;
+            $codeArray = explode('@:@', $code);
+            $id = explode('.',end($codeArray))[0];
+            if(!empty($id)){
+                $RmData = SavingRm::where(['company_id'=>$user->company_id,'customer_id'=>$id])->get()->map->formatData();
+                if (!empty($RmData)) {
+                    Helper::sendResponse("RM Detail", 1, $RmData);
+                } else {
+                    Helper::sendResponse('Wrong Qr Code');
+                }
+            }else{
+                Helper::sendResponse();
+            }
+
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
+
+    public function expences(Request $request)
+    {
+        $requestData = $request->all();
+        try {
+            $validator = Validator::make($request->all(), [
+                'user_id' => 'required',
+                'amount' => 'required',
+                'amount_type' => 'required',
+                'expenses_type' => 'required',
+                'reason' => 'required',
+            ]);
+            if ($validator->fails()) {
+                $error = Helper::ValidationSet($validator->errors());
+            }
+            $requestData['company_id'] = Auth::user()->company_id;
+            SavingExpenses::create($requestData);
+            Helper::sendResponse("Expences Successfully Added", 1);
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+
+    public function expencesList(Request $request){
+        $requestData = $request->all();
+        try {
+            $user = Auth::user();
+            $expenses = SavingExpenses::where('company_id',$user->company_id)
+            ->whereMonth('created_at',$request->month)
+            //->whereYear('created_at',$request->year);
+            ->whereYear('created_at',2023);
+            if($request->amount_type != ''){
+                $expenses = $expenses->where('amount_type',$request->amount_type);
+            }
+            if($request->expenses_type != ''){
+                $expenses = $expenses->where('expenses_type',$request->expenses_type);
+            }
+
+            $expenses = $expenses->orderBy('created_at',$request->sort ?? 'desc');
+            $expenses = $expenses->get()->map->formatData() ;
+            if(!empty($expenses)){
+                Helper::sendResponse("Expences List", 1,$expenses);
+            }else{
+                Helper::sendResponse("Expences List", 1,$expenses);
+            }
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+}
+

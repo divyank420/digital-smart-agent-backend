@@ -1,0 +1,332 @@
+<?php
+
+namespace App\Http\Controllers\api;
+
+use App\Helper\Helper;
+use App\Http\Controllers\Controller;
+use App\Models\SavingExpenses;
+use App\Models\SavingRm;
+use App\Models\SavingCustomer;
+use App\Models\SavingRmEntries;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Hash;
+
+class RmController extends Controller
+{
+    public function newRm(Request $request){
+        $requestData = $request->all();
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'mobile' => 'required',
+            'account_type' => 'required',
+            'monthly_amount' => 'required|integer',
+            'installment_amount' => 'required|integer',
+            'rm_code'=>'required',
+        ]);
+        if ($validator->fails()) {
+            $error = Helper::ValidationSet($validator->errors());
+        }
+        DB::beginTransaction();
+        try {
+            $customer = SavingCustomer::where('mobile',$request->mobile)->first();
+            if(empty($customer)){
+                $customer = new SavingCustomer();
+                $customer->name = $request->name;
+                $customer->mobile = $request->mobile;
+                $customer->email = $request->email;
+                $customer->password = Hash::make('user@123');
+                $customer->save();
+
+                $name = str_replace(' ' ,'',strtolower($request->name));
+                $customer->qr_code = $name = $name.rand(00000,99999).'@:@'.$customer->id.'.png';
+                
+                QrCode::size(500)
+                ->format('png')
+                ->generate($name, public_path('rm/qrcodes/'.$name));
+                $customer->rm_code = 'RM'.str_pad($customer->id,6,"0",STR_PAD_LEFT);
+                $customer->save();
+
+            }
+            $user = Auth::user();
+            $requestData['name'] = ucwords($requestData['name']);
+            $requestData['company_id'] = $user->company_id;
+            $requestData['agent_id'] = $user->id;
+            $requestData['customer_id'] = $customer->id;
+            $rmData = SavingRm::create($requestData);
+            
+            $rmData->rm_code = 'RM'.str_pad($rmData->id,6,"0",STR_PAD_LEFT);
+            $rmData->save();
+            
+            DB::commit();
+            Helper::sendResponse("Rm Successfully Added",200);
+        } catch (\Throwable $th) {
+            DB::rollback();
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+
+    public function rmDetail(Request $request){
+        $company_id = Auth::user()->company_id;
+        $validator = Validator::make($request->all(), [
+            'rm_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            $error = Helper::ValidationSet($validator->errors());
+        }
+        $rmData = SavingRm::with('customer')->where(['id'=>$request->rm_id,'company_id'=>$company_id])->first();
+        if(!empty($rmData)){
+            Helper::sendResponse("Rm Detail",1,$rmData);
+        }
+    }
+
+    public function editRm(Request $request){
+        $validator = Validator::make($request->all(), [
+            'rm_id' => 'required|integer',
+            'name' => 'required',
+            'mobile' => 'required',
+            'account_type' => 'required',
+            'monthly_amount' => 'required|integer',
+            'installment_amount' => 'required|integer',
+            'previous_balance' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            $error = Helper::ValidationSet($validator->errors());
+        }
+        
+        /* Customer Detail Save */
+        
+        $rmData = SavingRm::find($request->rm_id);
+        
+        $customer = SavingCustomer::where('mobile',$request->mobile)->first();
+        if(!empty($customer)){
+            $rmData->customer_id = $customer->id;
+        }else{
+            $customer = SavingCustomer::find($request->customer_id);
+            if($customer->mobile == ''){
+                $customer->mobile = $request->mobile;
+            }
+            if($customer->email == ''){
+                $customer->email = $request->email;
+            }
+            $customer->save();
+        }
+        
+        $rmData->name = $request->name;
+        $rmData->account_type = $request->account_type;
+        $rmData->monthly_amount = $request->monthly_amount;
+        $rmData->installment_amount = $request->installment_amount;
+        $rmData->previous_balance = $request->previous_balance;
+        
+        
+        if($rmData->save()){
+            Helper::sendResponse("Update rm detail Successfully",1);
+        }
+    }
+    public function deleteRm(Request $request){
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            $error = Helper::ValidationSet($validator->errors());
+        }
+        $rmData = SavingRm::find($request->id);
+        if(!empty($rmData)){
+            if(\File::exists(public_path('rm/qrcodes/'.$rmData->qr_code))){
+                \File::delete(public_path('rm/qrcodes/'.$rmData->qr_code));
+            }
+            $rmData->forceDelete();
+        }
+        Helper::sendResponse("Rm Successfully Deleted",1);
+
+    }
+    public function getRmList(Request $request){
+
+        try {
+            $type = $request->type ?? 'daily';
+            $user = Auth::user();
+            $rmList = SavingRm::with('customer')->orderBy('name','ASC');
+            if(!empty($request->type)){
+                $rmList = $rmList->where(['account_type'=>$type]);
+            }
+            $rmList = $rmList->where('company_id',$user->company_id);
+            if(isset($request->fetch_from) && !empty($request->fetch_from)){
+                $rmList = $rmList->paginate('5');
+            }else{
+                $rmList = $rmList->get()->map->formatData();
+            }
+            Helper::sendResponse("Rm List",1,$rmList);
+        } catch (\Throwable $th) {
+            dd($th->getMessage());
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+    public function getEntriesList(Request $request){
+        $requestData = $request->all();
+        try {
+            $user = Auth::user();
+            $currentDate = date('Y-m-d');
+            $entry_date = $currentDate;
+            if(isset($requestData['entry_date']) && !empty($requestData['entry_date']) ){
+                $entry_date = date('Y-m-d',strtotime($requestData['entry_date']));
+            }
+            //echo $entry_date;
+            $entriesList = SavingRmEntries::with(['RmDetail','Agent'])->whereDate('entry_date',$entry_date)->where('company_id',$user->company_id);
+            //echo "<pre>";print_r($entriesList);die;
+            $expences = SavingExpenses::with('Agent')->whereDate('created_at',$entry_date)->where('expenses_type','Others');
+            $denominationStatus = 1;
+
+            $user = Auth::user();
+
+            if($entry_date == $currentDate && isset($request->user_id)){
+                $role = Helper::getUserRole($request->user_id);
+                if(!in_array($role,['Developer'])){
+                    /*$count = Helper::CheckDenominationAddedOrNot($request->user_id);
+                    if($count == 0){
+                        $entriesList = $entriesList->where('user_id','!=',$request->user_id);
+                        $denominationStatus = 0;
+                    }*/
+
+                }
+
+            } 
+            if(isset($request->agent_id) && $request->agent_id != 0){
+                $entriesList = $entriesList->where(['user_id'=>$request->agent_id]);
+                $expences = $expences->where('user_id',$request->agent_id);
+            }else if($user->role != 'Developer'){
+                $entriesList = $entriesList->where(['user_id'=>$request->user_id]);
+                $expences = $expences->where('user_id',$request->user_id);
+            }
+            $entriesList = $entriesList->orderBy('created_at','DESC')->get()->map->formatData()->toArray();
+            $expences = $expences->get()->map->formatData()->toArray();
+            if(!empty($entriesList) || !empty($expences)){
+                Helper::sendResponse('Entry List',1,['entry_list'=>$entriesList,'expences'=>$expences],['denominationStatus'=>$denominationStatus]);
+            }else{
+                Helper::sendResponse('No Record Found',0,[],['denominationStatus'=>$denominationStatus]);
+            }
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+    public function getEntriesReportList(Request $request){
+        try {
+            $entry_date = $request->entry_date?date('Y-m-d',strtotime($request->entry_date)):date('Y-m-d');
+            $entry_date = $request->entry_date?date('2023-m-d',strtotime($request->entry_date)):date('Y-m-d');
+            $user = Auth::user();
+            $user_id = $request->user_id??$user->user_id;
+
+            $entriesList = SavingRmEntries::with(['RmDetail','Agent'])->whereDate('entry_date',$entry_date)->where('company_id',$user->company_id);
+
+            if($request->user_id != '' && $user->role != 'Developer'){
+                $entriesList = $entriesList->where('user_id',$user_id);
+            }
+            if(!empty($request->entry_type)){
+                $entriesList = $entriesList->where('entry_type',$request->entry_type);
+            }
+            $totalPenalty = 0;
+            if(!empty($request->amount_type)){
+                $entriesList = $entriesList->where('amount_type',$request->amount_type);
+            }else{
+                //$totalPenalty = $entriesList->where('entry_type','penalty')->sum('amount');
+            }
+            $totalAmount = $entriesList->sum('amount');
+            $entriesList = $entriesList->orderBy('created_at',$request->sort??'desc');
+            $entriesList = $entriesList->get()->map->formatData()->toArray();
+            if(!empty($entriesList)){
+                Helper::sendResponse('Entry List',1,['entry_list'=>$entriesList,'total_amount'=>$totalAmount,'default'=>$totalPenalty]);
+            }else{
+                Helper::sendResponse('No Record Found',0);
+            }
+            
+        } catch (Exception $e) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+    public function getRmEntries(Request $request){
+        try {
+            $month = $request->month ?? date('m');
+            $year = $request->year ?? date('Y');
+            $rmEntries = SavingRmEntries::with(['Agent'])->where(['rm_id'=>$request->rm_id]);
+            $rmEntries = $rmEntries->where(['payment_month'=>intval($month),'payment_year'=>intval($year)]);
+            $totalAmount = $rmEntries->sum('amount');
+            $rmEntries = $rmEntries->orderBy('created_at','DESC')->get()->map->formatData()->toArray();
+            if(!empty($rmEntries)){
+                Helper::sendResponse('Entry List',1,$rmEntries,['total_amount'=>$totalAmount]);
+            }else{
+                Helper::sendResponse('No Record Found',1,[],['total_amount'=>$totalAmount]);
+            }
+        } catch (\Throwable $th) {
+            Helper::sendResponse($th->getMessage());
+        }
+    }
+    public function getLastEntry(Request $request,$rmId = null){
+        if(empty($rmId)){
+            $rmId = $request->rm_id;
+        }
+        try {
+            $currentMonth = date('m');
+            $currentYear = date('Y');
+            $lastMonth = date('m',strtotime(date('Y-m-d').'-1 month'));
+            $lastYear = date('Y',strtotime(date('Y-m-d').'-1 month'));
+
+            //dd($lastYear);
+
+            $depositAmount = SavingRmEntries::join('saving_rms','rm_id','=','saving_rms.id')
+            ->select(DB::raw('CAST(sum(amount) as INT) as total_deposit'),'monthly_amount',
+            DB::raw('SUM(CASE WHEN payment_month = "'.$lastMonth.'" and payment_year = "'.$lastYear.'" THEN amount else 0 END) AS last_deposit'),
+            DB::raw('SUM(CASE WHEN payment_month = "'.$currentMonth.'" and payment_year = "'.$currentYear.'" THEN amount else 0 END) AS current_deposit'),
+            )
+
+            //->where('payment_month',$lastMonth)->where('payment_year',$lastYear)
+            ->where('rm_id',$rmId)->first();
+            
+            $entrySetup = Helper::getLastEntry($rmId);
+            if(!empty($entrySetup)){
+                Helper::sendResponse('Last Entry Data',1,$entrySetup);
+            }else{
+                Helper::sendResponse('No Record Found');
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            echo $th->getMessage();
+        }
+    }
+    public function getNewRmCode(){
+        try {
+            $lastId = SavingCustomer::latest()->first();
+            $rmId = 'RM000001';
+            if(!empty($lastId)){
+                $rmId = 'RM'.str_pad($lastId->id+1,6,"0",STR_PAD_LEFT);
+            }
+            Helper::sendResponse('Last Entry Data',200,['rm_code'=>$rmId]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            echo $th->getMessage();
+        }
+    }
+    public function getPendingAccountsList(Request $request){
+        $limit = 15;
+        $skip = 0;
+        if(isset($request->page) && !empty($request->page)){
+            $skip = $limit*($request->page-1);
+        }
+        $entry = DB::table('saving_rm_entries')
+        ->join('saving_rms','rm_id','=','saving_rms.id')
+        ->select('saving_rms.name','monthly_amount','rm_code',DB::raw('CAST(sum(amount) as INT) as total_amount'),'rm_id')
+        //->whereMonth('payment_month',date('m'))
+        ->where('payment_month',8)
+        ->where('payment_year',date('Y'))
+        ->groupBy('rm_id')
+        ->HAVING('total_amount','<',DB::raw("monthly_amount"))
+        ->orderBy('name','ASC')
+        ->take($limit)
+        ->skip($skip)->get();
+        if($entry->count() > 0){
+            sendResponse('Pending Records',1, $entry);
+        }
+        sendResponse('No Data Found');
+    }
+}

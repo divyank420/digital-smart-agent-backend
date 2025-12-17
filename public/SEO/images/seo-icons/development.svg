@@ -1,0 +1,57 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 496" width="496" height="496">
+	<title>development-svg</title>
+	<defs>
+		<image  width="136" height="328" id="img1" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIgAAAFIAQMAAACx6yQRAAAAAXNSR0IB2cksfwAAAAZQTFRFusY+HzNY7jZDjgAAAAJ0Uk5TAP9bkSK1AAAC0UlEQVR4nO3Wy42kMBAGYFs++EgIhOLQcAYb0hIKIXDkgLrWrzL1cMOs1CPtSsOp+1OD7d9lqo1p1wxGXAAbBwdwcJkATi4zgHhQSBLFgwFWCjbLpmQXgwvxWQ4lbELTWF5yyk8SBnJOfKkLHE7KLiQt0z5I+rY+SXpq5OJHYp5kSmt6kjnl5x4kpH1wLJ8snkkKQwgMZEszIPtlR7KWGUghlZDjKTOgS9dS53QjOQx+DFo8RPJULKvnUONhkuOBXyCFPKnGQyu6S0+ohgHkiF0Su6y1fvsE8qdSvziYrWGQA1VkATK8rWGM5SQCVFwNjEz6r+Q3Lgzl5VF8HiJP2Em5yr7JaaRsSswl00COd+KUeCX9tTDnePOXIMX2taN4JaFLaHLlHPJWAngl87VfTcgu30qrjSWXDdD6IWKkvJTguYQue5fYZFVipBxK2vxqqRp6U92lMnYALhuezC456J3K2ZuYa7L36OsrDc9GJHI1sS5WST/gHsVjIKUMuxxUJiUzBqtlQgm4HaUMx7IoSQPVaiWy14qem+S3nWuyF3G9Hb2Xqx1RKcHVck4fp96OShmW6n09Sujne3krqRN3Weu+pzGfZes18F5WUhVVYt/faEyrFCmGSa2vvndDmcsGa8F9MWXX8pd7qfWOmTfZuLgiC5f1yrOdFy0R22M7jSyrLpbJ8sJbu5xSwtma+CVHf/k2mbXsGDPKpGWT4leM+b24aPA/B4rBmLFJWCV1Y3dy11hq8JbJ9ijtlchkVb8R0mK+FTcS8yQt1FuZBnI+yjyQ41ECfc1/WWrM98JayljsSCIXp8Qrwb8SdzK3LnwnQcnSOjWVQwhIsdjNqWxcnBKPHZ9K5DIpmckQfBF3gsuicgiBgexKNiXrFyR+QcyPfKtELuZzsgpZvlE2IeFjsguZPyaHkOljcgrxH5OXECcE+PUjSsx1/ch/IP9a/fxT8gdE4lJn/9mODgAAAABJRU5ErkJggg=="/>
+		<image  width="136" height="328" id="img2" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIgAAAFIAQMAAACx6yQRAAAAAXNSR0IB2cksfwAAAAZQTFRFusY+HzNY7jZDjgAAAAJ0Uk5TAP9bkSK1AAACxklEQVR4nO3XS5LcIAwGYCgWLDkCR/HR8NE4Ckdwdl44rZg3krDj6UpSk6r2avqraQO/hUwLkS/YBb40ABEL4LEsABsWAHIjecqBRJ2Cb62ZmCgrEzS8jRLIdGaCpujmgiYNczmwbAsVb+GFZTVMSK4ziRGt+H+4SBzHVASOYy4OxTETf+a434o7xaI4ZhIEjoPLco6M45jJTgLiEkfGcXBJI6M4uKSRURxc0sgoDibwA1Ic+3AXwAGVajZdXJUWEOTa1U1kkxqQKrWrmmgmplSzbJHZC3nlekjXciEwiOviibgqMJGfTIKj4k2RUCUWPMRpdIlzIqKZiCvZiNgunklgsjE5quwtjTWJGSQwObDEnLmELEd/XnsUXSXG9WICSDQT1aUUmayiWtlxWZgYJqpJ281FZBfLRDMRRM65L1XWMlJsqiBaaZoc8yBLfF7LKCl4M4hM9S4HUbW6RS3NNLuViR/F5I08iJ3LViXUSPcsy4W4vG1vpWzbIluSzZaKKsV6TsZQ8edCViTpJcTEJ8mlmfdkQCKYxLg2Im4iqZ5Laea9ffxWbK75QUx+ZlN55ZW2A4i6kPiMFBNJJJSKqSXuco9IInv+kE8SgzgmSz5/yJL23kR0seUccyGpNZjyNuuiZ+KbpEzUTNZBhr1WEoD6552cX3CvLvJClqNLbr1c7I7kXJIZJUVvNioay/lJh0FS9IqJ9IOkoLmIFUk/92QxD0QPJ6GvCBBRD6S/6G/FYxHPJBBxD2TpJ6ob2YnYBzIE/QXR46nrUoDIcAi9E49F9sguRfQfLV12Io5J/4nS5UXEMjFtYYOsWDSTvrBBAhbJpC/sRtrCBjmItIU1sRMBIoaJfiCKiXwg4iP/VORfEzUR2h3ek1mX4b3pHZl1Pd4r35FZF6a9+z2ZvQPCH5HZO8lfCODrI0xEvz7yH8h3q59vJL8Ac6dOqxwrsMYAAAAASUVORK5CYII="/>
+		<image  width="240" height="256" id="img3" href="data:image/png;base64,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"/>
+		<image  width="16" height="16" id="img4" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAAXNSR0IB2cksfwAAAANQTFRFHzNYIdtlYQAAAAxJREFUeJxjYCANAAAAMAABFoma0QAAAABJRU5ErkJggg=="/>
+		<image  width="16" height="16" id="img5" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAAXNSR0IB2cksfwAAAANQTFRFHzNYIdtlYQAAAAxJREFUeJxjYCANAAAAMAABFoma0QAAAABJRU5ErkJggg=="/>
+		<image  width="16" height="16" id="img6" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAAXNSR0IB2cksfwAAAANQTFRFHzNYIdtlYQAAAAxJREFUeJxjYCANAAAAMAABFoma0QAAAABJRU5ErkJggg=="/>
+		<image  width="16" height="16" id="img7" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAAXNSR0IB2cksfwAAAANQTFRFHzNYIdtlYQAAAAxJREFUeJxjYCANAAAAMAABFoma0QAAAABJRU5ErkJggg=="/>
+	</defs>
+	<style>
+	</style>
+	<g id="Layer">
+		<g id="Layer">
+			<g id="Layer">
+				<use id="Layer" href="#img1" x="0" y="164"/>
+				<use id="Layer" href="#img2" x="360" y="164"/>
+				<use id="Layer" href="#img3" x="128" y="4"/>
+				<use id="Layer" href="#img4" x="240" y="276"/>
+				<use id="Layer" href="#img5" x="240" y="308"/>
+				<use id="Layer" href="#img6" x="240" y="340"/>
+				<use id="Layer" href="#img7" x="240" y="372"/>
+			</g>
+		</g>
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+	<g id="Layer">
+	</g>
+</svg>
