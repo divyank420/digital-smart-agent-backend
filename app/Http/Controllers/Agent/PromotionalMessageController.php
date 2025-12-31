@@ -32,8 +32,7 @@ class PromotionalMessageController extends Controller
     {
         $promotion = PromotionalMessage::findOrFail($id);
         $promotion->update($request->all());
-
-        return redirect()->back()->with('success', 'Promotional message updated.');
+        return redirect()->route('agent.promotions.index')->with('success', 'Promotional message updated.');
     }
 
     public function destroy($id)
