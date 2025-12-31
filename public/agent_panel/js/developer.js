@@ -55,9 +55,8 @@ function getErrorText(errorType,field_value){
 			error = "This Field is mandatory.";
 		}
 		break;
-		case 'table_name':
-		case 'item_name':
-		case 'item_code':
+		case 'title':
+		case 'message':
 		if(field_value == ''){
 			error = 'Please enter '+ucwords(errorType.replace('_',' '));
 		}
@@ -102,6 +101,8 @@ function getErrorText(errorType,field_value){
 		}
 		break;
 		
+		case 'start_date':
+		case 'end_date':
 		case 'area':
 		case 'category':
 		if(field_value == ''){

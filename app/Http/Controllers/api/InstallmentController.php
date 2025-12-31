@@ -40,8 +40,8 @@ class InstallmentController extends Controller
                     $requestData['entry_date'] = date('Y-m-d');
                 }
                 $requestData['payment_month'] = $request->payment_month + 1;
-                
-                $message = "Hello *$rmDetail->name* 👋,\n\nYour *RD* amount has been successfully deposited at Khatod Saving House.\n\n*Date*: " . date('d l, Y', strtotime($request->entry_date)) . " 📅\n*Amount*: ".amountFormat($request->amount)." 💰\n\n🙏 *Thank you for being with us!* 🙏";
+                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n*Date*: " . date('d l, Y', strtotime($request->entry_date)) . " 📅\n*Amount*: ".amountFormat($request->amount)." 💰";
+                $message = Helper::transactionWithPromotionalMessage($rmDetail->name,$message);
                 
                 $encodedMessage = urlencode($message);
                 $mobileNo = $user->role == 'Developer'?'7665629201':$user->mobile;

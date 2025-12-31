@@ -4,6 +4,7 @@
 
 namespace App\Helper;
 
+use App\Models\PromotionalMessage;
 use Illuminate\Support\Facades\DB;
 use Image;
 use App\Models\SavingDenomination;
@@ -12,11 +13,15 @@ use App\Models\SavingRmEntries;
 use App\Models\SavingExpenses;
 use App\Models\SavingCompany;
 use App\Models\User;
+use Carbon\Carbon;
 
 class Helper
 {
-    public static function pr($data){
-        echo "<pre>";print_r($data);echo "</pre>";
+    public static function pr($data)
+    {
+        echo "<pre>";
+        print_r($data);
+        echo "</pre>";
     }
     public static function pushNotification($tokens, $notificationData)
     {
@@ -52,35 +57,39 @@ class Helper
         return $result;
     }
 
-    public static function getAllRmCode(){
+    public static function getAllRmCode()
+    {
         return SavingRm::all();
     }
-    public static function getUserRole($id){
-        return User::where('id',$id)->pluck('role')->first();
+    public static function getUserRole($id)
+    {
+        return User::where('id', $id)->pluck('role')->first();
     }
-    
-    public static function getTeamMember($company_id = null){
-        if(empty($company_id)){
+
+    public static function getTeamMember($company_id = null)
+    {
+        if (empty($company_id)) {
             $company_id = auth()->user()->company_id;
         }
-        $members = User::where('company_id',$company_id)->pluck('name','id');
+        $members = User::where('company_id', $company_id)->pluck('name', 'id');
         return $members;
     }
-    public static function CheckDenominationAddedOrNot($id){
-        return SavingDenomination::where('user_id',$id)->whereDate('created_at',date('Y-m-d'))->count();
+    public static function CheckDenominationAddedOrNot($id)
+    {
+        return SavingDenomination::where('user_id', $id)->whereDate('created_at', date('Y-m-d'))->count();
     }
 
     public static function ValidationSet($data)
     {
         $errors = array_column(json_decode(json_encode($data), true), 0)[0];
-        self::sendResponse($errors,422);
+        self::sendResponse($errors, 422);
     }
     public static function WebValidationSet($data)
     {
         $errors = array_column(json_decode(json_encode($data), true), 0)[0];
         return $errors;
     }
-    
+
     public static function getLastEntry($rmId)
     {
         /* Last Entry Data */
@@ -90,22 +99,22 @@ class Helper
 
         $currentMonth = (int)date('m');
         $currentYear = (int)date('Y');
-        $lastMonth = (int)date('m',strtotime(date('Y-m-d').'-1 month'));
-        $lastYear = (int)date('Y',strtotime(date('Y-m-d').'-1 month'));
-        $nextMonth = (int)date('m',strtotime(date('Y-m-d').'+1 month'));
-        $nextYear = (int)date('Y',strtotime(date('Y-m-d').'+1 month'));
-        
-        
+        $lastMonth = (int)date('m', strtotime(date('Y-m-d') . '-1 month'));
+        $lastYear = (int)date('Y', strtotime(date('Y-m-d') . '-1 month'));
+        $nextMonth = (int)date('m', strtotime(date('Y-m-d') . '+1 month'));
+        $nextYear = (int)date('Y', strtotime(date('Y-m-d') . '+1 month'));
 
-        $rowData = SavingRmEntries::join('saving_rms','rm_id','=','saving_rms.id')
-        ->select(
-            DB::raw('CAST(sum(amount) as INT) as total_deposit'),
-            'monthly_amount',
-            DB::raw('SUM(CASE WHEN payment_month = "'.$lastMonth.'" and payment_year = "'.$lastYear.'" THEN amount else 0 END) AS last_deposit'),
-            DB::raw('SUM(CASE WHEN payment_month = "'.$currentMonth.'" and payment_year = "'.$currentYear.'" THEN amount else 0 END) AS current_deposit'),
-            DB::raw('SUM(CASE WHEN payment_month = "'.$nextMonth.'" and payment_year = "'.$nextYear.'" THEN amount else 0 END) AS next_month_deposit'),
-        )->where('rm_id',$rmId)
-        ->first();
+
+
+        $rowData = SavingRmEntries::join('saving_rms', 'rm_id', '=', 'saving_rms.id')
+            ->select(
+                DB::raw('CAST(sum(amount) as INT) as total_deposit'),
+                'monthly_amount',
+                DB::raw('SUM(CASE WHEN payment_month = "' . $lastMonth . '" and payment_year = "' . $lastYear . '" THEN amount else 0 END) AS last_deposit'),
+                DB::raw('SUM(CASE WHEN payment_month = "' . $currentMonth . '" and payment_year = "' . $currentYear . '" THEN amount else 0 END) AS current_deposit'),
+                DB::raw('SUM(CASE WHEN payment_month = "' . $nextMonth . '" and payment_year = "' . $nextYear . '" THEN amount else 0 END) AS next_month_deposit'),
+            )->where('rm_id', $rmId)
+            ->first();
         //->first();
         $monthly_amount = (int)$rowData->monthly_amount;
         $month = (int)date('m');
@@ -113,15 +122,15 @@ class Helper
         $lastDepositAmount = (int)$rowData->last_deposit;
         $currentDepositAmount = (int)$rowData->current_deposit;
 
-        if($lastDepositAmount < $monthly_amount){
+        if ($lastDepositAmount < $monthly_amount) {
             $month = $lastMonth;
             $year = $lastYear;
             $remainingAmount = $monthly_amount - $lastDepositAmount;
-        }else if($currentDepositAmount <= $monthly_amount){
+        } else if ($currentDepositAmount <= $monthly_amount) {
             $month = $currentMonth;
             $year = $currentYear;
             $remainingAmount = $monthly_amount - $currentDepositAmount;
-        }else{
+        } else {
             $month = $nextMonth;
             $year = $nextYear;
             $remainingAmount = $monthly_amount;
@@ -156,7 +165,8 @@ class Helper
         $month = (int)date('m');
         $year = (int)date('Y');
         $totalDepositAmount = SavingRmEntries::where([
-            'rm_id' => $rmId, 'payment_month' => $month,
+            'rm_id' => $rmId,
+            'payment_month' => $month,
             'payment_year' => $year
         ])->sum('amount');
 
@@ -181,36 +191,40 @@ class Helper
         ];
         return $entrySetup;
     }
-    public  static function sendResponse($message = 'Something went wrong',$status = 500, $data = null,$extra = null){
+    public  static function sendResponse($message = 'Something went wrong', $status = 500, $data = null, $extra = null)
+    {
         $response = ['status' => $status, 'message' => $message];
-        if(!empty($extra)){
+        if (!empty($extra)) {
             extract($extra);
-            $response = array_merge($response,$extra);
+            $response = array_merge($response, $extra);
         }
         if ($status != 0) {
-            if(!empty($data)){   
+            if (!empty($data)) {
                 $response['data'] = $data;
             }
         }
-        if(strlen($status) == 3){
+        if (strlen($status) == 3) {
             unset($response['status']);
             http_response_code($status);
         }
         echo json_encode($response);
         die;
     }
-    public static function getCompanyDetail($company_id){
+    public static function getCompanyDetail($company_id)
+    {
         return SavingCompany::find($company_id);
     }
 
-    public static function getReportExpenses($company_id,$expencesDate){
-        return SavingExpenses::where('company_id',$company_id)
-        ->whereDate('created_at',date('Y-m-d',strtotime($expencesDate)))
-        ->whereIn('expenses_type',['Others','Withdrawal'])
-        ->get();
+    public static function getReportExpenses($company_id, $expencesDate)
+    {
+        return SavingExpenses::where('company_id', $company_id)
+            ->whereDate('created_at', date('Y-m-d', strtotime($expencesDate)))
+            ->whereIn('expenses_type', ['Others', 'Withdrawal'])
+            ->get();
     }
-    public static function getDenomination($company_id,$denominationDate = null){
-        $denominationDate = $denominationDate == null?date('Y-m-d'):date('Y-m-d',strtotime($denominationDate));
+    public static function getDenomination($company_id, $denominationDate = null)
+    {
+        $denominationDate = $denominationDate == null ? date('Y-m-d') : date('Y-m-d', strtotime($denominationDate));
 
         $denomination = SavingDenomination::select([
             'id',
@@ -231,29 +245,88 @@ class Helper
             DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10 ELSE 0 END) as n_10'),
             DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10*10 ELSE 0 END) as n_10_value'),
         ])
-        ->where('company_id',$company_id)
-        ->whereDate('denomination_date', $denominationDate)->first();
+            ->where('company_id', $company_id)
+            ->whereDate('denomination_date', $denominationDate)->first();
         return $denomination;
     }
-    public static function getTotalEntries($type='today'){
+    public static function getTotalEntries($type = 'today')
+    {
         $entries = SavingRmEntries::query();
-        if($type == 'today'){
-
-        }else{
+        if ($type == 'today') {
+        } else {
         }
-        return $entries = $entries->whereDate('entry_date',date('Y-m-d'))->sum('amount');
+        return $entries = $entries->whereDate('entry_date', date('Y-m-d'))->sum('amount');
     }
-    
-    public static function getTotalExpences($type='today'){
+
+    public static function getTotalExpences($type = 'today')
+    {
         $expences = SavingExpenses::query();
-        if($type == 'today'){
-
-        }else{
+        if ($type == 'today') {
+        } else {
         }
-        return $expences = $expences->whereDate('created_at',date('Y-m-d'))->sum('amount');
+        return $expences = $expences->whereDate('created_at', date('Y-m-d'))->sum('amount');
     }
 
-    public static function generateActivity(){
+    public static function transactionWithPromotionalMessage($customerName, $transactionMessage)
+    {
+        $greeting = "Dear *{$customerName}* 👋, \n\n";
+        // Thank you note
+        $thankYou = "\n\n🙏 *Thank you for being with us!* 🙏";
+        $today = Carbon::today();
+        $promos = PromotionalMessage::where('is_active', true)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhere('start_date', '<=', $today);
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
+            })
+            ->get();
+        // $promoMessage = !empty($promo) ? $promo->message : '';
+        // $position = $promo?->position ?? 'top';
 
+        // switch ($position) {
+        //     case 'top':
+        //         $finalMessage = $promoMessage . "\n\n" . $transactionMessage;
+
+        //     case 'middle':
+        //         $finalMessage = $promoMessage . "\n\n" . $transactionMessage;
+
+        //     case 'bottom':
+        //         $finalMessage = $transactionMessage . "\n\n" . $promoMessage;
+
+        //     default:
+        //         $finalMessage = $transactionMessage;
+        // }
+
+        $positions = ['top', 'middle', 'bottom', 'end'];
+
+        $finalMessage = '';
+
+        foreach ($positions as $position) {
+            $messages = $promos->where('position', $position)->pluck('message')->toArray();
+            $messagesText = implode("\n\n", $messages);
+
+            if ($position === 'top' && !empty($messagesText)) {
+                $finalMessage .= $messagesText . "\n\n";
+            }
+
+            if ($position === 'middle') {
+                $finalMessage .= $transactionMessage . "\n\n";
+                if (!empty($messagesText)) {
+                    $finalMessage .= $messagesText . "\n\n";
+                }
+            }
+
+            if ($position === 'bottom' && !empty($messagesText)) {
+                $finalMessage .= $messagesText . "\n\n";
+            }
+
+            if ($position === 'end' && !empty($messagesText)) {
+                $finalMessage .= $messagesText . "\n\n";
+            }
+        }
+        $finalMessage = $greeting . $finalMessage . $thankYou;
+        return $finalMessage;
     }
+    public static function generateActivity() {}
 }

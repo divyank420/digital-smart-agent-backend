@@ -52,5 +52,11 @@
                 <li><a href="content-text-utilities.html"><i class="bx bx-radio-circle"></i>Text Utilities</a></li>
             </ul>
         </li>
+        <li class="{{ $segments['1'] == 'entries'?'mm-active':'' }}">
+            <a href="{{ route('agent.promotions.index') }}">
+                <div class="parent-icon"><i class="bx bx-tone"></i></div>
+                <div class="menu-title">Promotional Message</div>
+            </a>
+        </li>
     </ul>
 </div>

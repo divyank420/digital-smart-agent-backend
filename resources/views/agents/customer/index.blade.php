@@ -1,26 +1,13 @@
 @extends('layouts.agent')
 @section('content')
 <div class="row">
-    <div class="col-xl-2 col-0">
+    <div class="col-xl-12 col-md-6 col-12">
         <div class="card">
             <div class="card-body">
                 <div class="fm-search">
                     <div class="mb-0">
                         <div class="input-group input-group-lg"> <span class="input-group-text bg-transparent"><i class="bx bx-search"></i></span>
                             <input type="text" class="form-control search" placeholder="Search customer">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-10 col-12">
-        <div class="card">
-            <div class="card-body">
-                <div class="fm-search">
-                    <div class="mb-0">
-                        <div class="input-group input-group-lg"> <span class="input-group-text bg-transparent"><i class="bx bx-search"></i></span>
-                            <input type="text" class="form-control form-control-sm search" placeholder="Search customer">
                         </div>
                     </div>
                 </div>

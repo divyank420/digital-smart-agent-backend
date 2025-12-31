@@ -19,7 +19,7 @@
     <td>{{ amountFormat($customer['monthly_amount']) }}</td>
     <td>{{ amountFormat($customer['installment_amount']) }}</td>
     <td>
-        <button class="badge badge-info">Edit</button>
+        <button class="badge badge-primary">Edit</button>
     </td>
 </tr>
 @endforeach
