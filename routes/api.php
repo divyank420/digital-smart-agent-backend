@@ -69,6 +69,7 @@ Route::group(['middleware'=>'cors'], function () {
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
         
         /* Reports */
+        Route::any('report-dashboard', [ReportsController::class, 'reportDashboard']);
         Route::any('get-overall-report', [ReportsController::class, 'getOverAllReport']);
         Route::any('yearly-report', [ReportsController::class, 'yearlyReport']);
         Route::any('monthly-report', [ReportsController::class, 'monthlyReport']);

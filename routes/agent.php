@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Agent\AccountsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Agent\AuthController;
@@ -51,6 +52,13 @@ Route::prefix('/agent')->name('agent.')->group(function () {
             Route::post('promotions', [PromotionalMessageController::class, 'store'])->name('store');
             Route::put('promotions/{id}', [PromotionalMessageController::class, 'update'])->name('update');
             Route::delete('promotions/{id}', [PromotionalMessageController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::name('accounts.')->group(function () {
+            Route::get('accounts', [AccountsController::class, 'index'])->name('index');
+            Route::post('accounts', [AccountsController::class, 'store'])->name('store');
+            Route::put('accounts/{id}', [AccountsController::class, 'update'])->name('update');
+            Route::delete('accounts/{id}', [AccountsController::class, 'destroy'])->name('destroy');
         });
 
         //Route::get('/today-entries',  [EntriesController::class, 'index'])->name('entries');

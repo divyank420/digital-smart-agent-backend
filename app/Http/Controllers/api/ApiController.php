@@ -4,6 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
+use App\Models\CompanyAccount;
 use App\Models\SavingDenomination;
 use App\Models\SavingCustomer;
 use App\Models\SavingCompany;
@@ -72,7 +73,9 @@ class ApiController extends Controller
             
             $user = Auth::guard($guard)->user();
             $agent_lists = User::where('company_id',$user->company_id)->where('id','!=',$user->id)->where('id','!=',1)->pluck('name','id')->toArray();
+            $accounts = CompanyAccount::where('company_id',$user->company_id)->where('is_active',true)->get();
             $user->agent_list = $agent_lists;
+            $user->accounts = $accounts;
             //$user = Auth::user();
 
             return sendResponse('Login Successful.',200,['token'=>$token,'userData'=>$user]);

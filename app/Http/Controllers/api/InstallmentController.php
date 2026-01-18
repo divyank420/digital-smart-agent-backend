@@ -4,10 +4,12 @@ namespace App\Http\Controllers\api;
 
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
+use App\Models\CompanyAccount;
 use App\Models\SavingRm;
 use App\Models\SavingRmEntries;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class InstallmentController extends Controller
@@ -30,27 +32,34 @@ class InstallmentController extends Controller
         $requestData = $request->all();
         try {
             $rmDetail = SavingRm::with('customer')->where('id', $request->rm_id)->first();
-            if(!empty($rmDetail)){
+            if (!empty($rmDetail)) {
                 $user = Auth::user();
                 $company_id = $user->company_id;
                 $requestData['company_id'] = $company_id;
-                if (isset($requestData['entry_date'])) {
-                    $requestData['entry_date'] = date('Y-m-d', strtotime($requestData['entry_date']));
-                } else {
-                    $requestData['entry_date'] = date('Y-m-d');
-                }
-                $requestData['payment_month'] = $request->payment_month + 1;
-                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n*Date*: " . date('d l, Y', strtotime($request->entry_date)) . " 📅\n*Amount*: ".amountFormat($request->amount)." 💰";
-                $message = Helper::transactionWithPromotionalMessage($rmDetail->name,$message);
+                $requestData['entry_date'] = $request->entry_date
+                ? date('Y-m-d', strtotime($request->entry_date))
+                : date('Y-m-d');
+                $requestData['payment_month'] = $request->payment_month;
                 
+                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n*Date*: " . date('d l, Y', strtotime($request->entry_date)) . " 📅\n*Amount*: " . amountFormat($request->amount) . " 💰";
+                $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
+
+                if ($request->amount_type === 'online' && $request->account) {
+                    $account = CompanyAccount::where('id', $request->account)
+                        ->where('company_id', $user->company_id)
+                        ->firstOrFail();
+                    $requestData['account_id'] = (int)$request->account ?? null;
+                }
+
                 $encodedMessage = urlencode($message);
-                $mobileNo = $user->role == 'Developer'?'7665629201':$user->mobile;
+                $mobileNo = $user->role == 'Developer' ? '7665629201' : $user->mobile;
                 $mobileNo = $rmDetail->customer->mobile;
                 $redirect_url = "https://wa.me/91{$mobileNo}/?text=" . $encodedMessage;
                 $data = ['redirect_url' => $redirect_url];
                 SavingRmEntries::create($requestData);
+
                 Helper::sendResponse("Entry Successfully entered", 1, $data);
-            }else{
+            } else {
                 Helper::sendResponse("Customer Not found", 0);
             }
         } catch (\Throwable $th) {
@@ -64,25 +73,27 @@ class InstallmentController extends Controller
             $entry = SavingRmEntries::find($request->id);
             $company_id = Auth::user()->company_id;
             $requestData['company_id'] = $company_id;
-            $requestData['entry_date'] = date('Y-m-d', strtotime($requestData['entry_date']));
-            $requestData['payment_month'] = $request->payment_month + 1;
+            if(isset($requestData['entry_date'])){
+                $requestData['entry_date'] = date('Y-m-d', strtotime($requestData['entry_date']));
+            }
+            if(isset($requestData['payment_month'])){
+                $requestData['payment_month'] = $request->payment_month;
+            }
             $entry->fill($requestData);
             $entry->save();
             Helper::sendResponse("Entry Successfully updated", 1);
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());
-        }
+        }   
     }
     public function deleteInstallment(Request $request)
     {
-        //echo json_encode(['id'=>$request->id]);die;
-        $requestData = $request->all();
         try {
-            $entry = SavingRmEntries::find($request->id);
+            $entry = SavingRmEntries::withTrashed()->where('id', $request->id)->first();
             if (!empty($entry)) {
-                if(isset($request->is_force_deleted) && $request->is_force_delete){
+                if ($entry->trashed() && !$request->boolean('is_force_delete')) {
                     $entry = $entry->forceDelete();
-                }else{
+                } else {
                     $entry = $entry->delete();
                 }
             }

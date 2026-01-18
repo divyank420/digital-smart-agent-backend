@@ -4,6 +4,7 @@
 
 namespace App\Helper;
 
+use App\Models\CompanyAccount;
 use App\Models\PromotionalMessage;
 use Illuminate\Support\Facades\DB;
 use Image;
@@ -327,6 +328,31 @@ class Helper
         }
         $finalMessage = $greeting . $finalMessage . $thankYou;
         return $finalMessage;
+    }
+    public static function getAccountDetail($accountId, $company_id)
+    {
+        $account = CompanyAccount::where('id', $accountId)
+            ->where('company_id', $company_id)
+            ->firstOrFail();
+        return $account;
+    }
+
+    public static function updateAccountDetail(
+        CompanyAccount $account,
+        float $amount,
+        string $type = 'credit' // credit | debit
+    ): void {
+        DB::transaction(function () use ($account, $amount, $type) {
+            $account->refresh();
+
+            if ($type === 'credit') {
+                $account->current_balance += $amount;
+            } else {
+                $account->current_balance -= $amount;
+            }
+
+            $account->save();
+        });
     }
     public static function generateActivity() {}
 }
