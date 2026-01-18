@@ -64,6 +64,35 @@ class DashboardController extends Controller
             $dashboardData['remaining_rms'] =
                 $dashboardData['total_rms'] - $dashboardData['fully_paid_rms'];
 
+
+            for ($i = 0; $i < 12; $i++) {
+                $date = ($i == 0) ? date('Y-m-d') : date('Y-m-d', strtotime('-' . $i . ' day'));
+
+                $collection = SavingRmEntries::whereDate('entry_date', $date)
+                    ->where('company_id', $user->company_id)
+                    ->selectRaw("
+                        SUM(CASE WHEN amount_type = 'online' THEN amount ELSE 0 END) as online,
+                        SUM(CASE WHEN amount_type = 'cash' THEN amount ELSE 0 END) as cash,
+                        SUM(amount) as total
+                    ")
+                    ->first();
+
+                $expense = SavingExpenses::whereDate('created_at', $date)->where('expenses_type', 'Others')->where('company_id', $user->company_id)->sum('amount');
+
+                $denomination = SavingDenomination::whereDate('denomination_date', $date)->where('company_id', $user->company_id)->sum('total');
+
+                $total_deno_exp_amount = $denomination + $expense;
+                $dashboardData['last_records_history'][] = [
+                    'date'        => date('d-M', strtotime($date)),
+                    'online'      => $collection->online ?? 0,
+                    'cash'        => $collection->cash ?? 0,
+                    'collection'  => $collection->total ?? 0,
+                    'expenses'    => $expense ?? 0,
+                    'denomination' => $denomination ?? 0,
+                    'total_deno'  => $total_deno_exp_amount
+                ];
+            }
+
             Helper::sendResponse("Dashboard Data", 1, $dashboardData);
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());

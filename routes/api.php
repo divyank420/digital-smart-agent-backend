@@ -63,7 +63,7 @@ Route::group(['middleware'=>'cors'], function () {
         Route::any('denomination-detail', [ApiController::class, 'denominationDetail']);
         Route::any('denomination-list', [ApiController::class, 'denominationList']);
         
-        Route::Post('expences', [ApiController::class, 'expences']);
+        Route::Post('add-expences', [ApiController::class, 'addExpences']);
         Route::Post('expenses-list', [ApiController::class, 'expencesList']);
         
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);

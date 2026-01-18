@@ -10,10 +10,10 @@ use App\Models\SavingCustomer;
 use App\Models\SavingRmEntries;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
-use Hash;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 
 class RmController extends Controller
 {
@@ -135,8 +135,8 @@ class RmController extends Controller
         }
         $rmData = SavingRm::find($request->id);
         if(!empty($rmData)){
-            if(\File::exists(public_path('rm/qrcodes/'.$rmData->qr_code))){
-                \File::delete(public_path('rm/qrcodes/'.$rmData->qr_code));
+            if(File::exists(public_path('rm/qrcodes/'.$rmData->qr_code))){
+                File::delete(public_path('rm/qrcodes/'.$rmData->qr_code));
             }
             $rmData->forceDelete();
         }

@@ -6,16 +6,13 @@ use App\Helper\Helper;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
 use App\Models\SavingDenomination;
-use App\Models\SavingCustomer;
 use App\Models\SavingCompany;
 use App\Models\SavingExpenses;
 use App\Models\SavingRm;
-use App\Models\SavingRmEntries;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Config;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -252,7 +249,7 @@ class ApiController extends Controller
         }
     }
 
-    public function expences(Request $request)
+    public function addExpences(Request $request)
     {
         $requestData = $request->all();
         try {
@@ -277,6 +274,7 @@ class ApiController extends Controller
     public function expencesList(Request $request){
         $requestData = $request->all();
         try {
+
             $user = Auth::user();
             $expenses = SavingExpenses::where('company_id',$user->company_id)
             ->whereMonth('created_at',$request->month)

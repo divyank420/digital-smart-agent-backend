@@ -14,7 +14,7 @@ class SavingAccountTransaction extends Model
         'account_id',
         'transactionable_id',
         'transactionable_type',
-        'type',
+        'transaction_type',
         'amount',
         'balance_after',
         'remarks',
