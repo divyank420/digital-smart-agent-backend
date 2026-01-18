@@ -37,10 +37,10 @@ class InstallmentController extends Controller
                 $company_id = $user->company_id;
                 $requestData['company_id'] = $company_id;
                 $requestData['entry_date'] = $request->entry_date
-                ? date('Y-m-d', strtotime($request->entry_date))
-                : date('Y-m-d');
+                    ? date('Y-m-d', strtotime($request->entry_date))
+                    : date('Y-m-d');
                 $requestData['payment_month'] = $request->payment_month;
-                
+
                 $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n*Date*: " . date('d l, Y', strtotime($request->entry_date)) . " 📅\n*Amount*: " . amountFormat($request->amount) . " 💰";
                 $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
 
@@ -73,10 +73,10 @@ class InstallmentController extends Controller
             $entry = SavingRmEntries::find($request->id);
             $company_id = Auth::user()->company_id;
             $requestData['company_id'] = $company_id;
-            if(isset($requestData['entry_date'])){
+            if (isset($requestData['entry_date'])) {
                 $requestData['entry_date'] = date('Y-m-d', strtotime($requestData['entry_date']));
             }
-            if(isset($requestData['payment_month'])){
+            if (isset($requestData['payment_month'])) {
                 $requestData['payment_month'] = $request->payment_month;
             }
             $entry->fill($requestData);
@@ -84,7 +84,7 @@ class InstallmentController extends Controller
             Helper::sendResponse("Entry Successfully updated", 1);
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());
-        }   
+        }
     }
     public function deleteInstallment(Request $request)
     {
