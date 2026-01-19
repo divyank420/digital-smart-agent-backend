@@ -16,6 +16,7 @@ class SavingRmEntries extends Model
     protected $fillable = ['company_id', 'user_id', 'rm_id', 'account_id', 'transaction_id', 'amount', 'amount_type', 'entry_type', 'payment_month', 'payment_year', 'entry_date'];
 
     protected $casts = [
+        'created_at' => 'date',
         'deleted_at' => 'datetime',
     ];
 
@@ -74,6 +75,7 @@ class SavingRmEntries extends Model
             'payment_year' => $this->payment_year,
             'entry_date' => date('d-M-Y', strtotime($this->entry_date)),
             'entry_date_key' => date('d-m-Y', strtotime($this->entry_date)),
+            'entry_date_original' => date('Y-m-d', strtotime($this->entry_date)),
             'entry_time' => date('h:i A', strtotime($this->created_at)),
             'user_id' => $this->user_id,
             'rm_id' => $this->rm_id,

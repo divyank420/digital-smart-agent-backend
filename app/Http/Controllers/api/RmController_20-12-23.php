@@ -241,8 +241,8 @@ class RmController extends Controller
                 Helper::sendResponse('No Record Found',0);
             }
             
-        } catch (Exception $e) {
-            Helper::sendResponse($th->getMessage());
+        } catch (\Exception $e) {
+            Helper::sendResponse($e->getMessage());
         }
     }
     public function getRmEntries(Request $request){
