@@ -261,13 +261,13 @@ class ApiController extends Controller
                 'reason' => 'required',
             ]);
             if ($validator->fails()) {
-                $error = Helper::ValidationSet($validator->errors());
+                $error = Helper::ValidationSet($validator->errors(),422);
             }
             $requestData['company_id'] = Auth::user()->company_id;
             SavingExpenses::create($requestData);
             sendResponse("Expences Successfully Added", 1);
         } catch (\Throwable $th) {
-            sendResponse($th->getMessage());
+            sendResponse($th->getMessage(),500);
         }
     }
 

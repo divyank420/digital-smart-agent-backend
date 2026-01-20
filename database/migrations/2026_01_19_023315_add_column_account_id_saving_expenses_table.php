@@ -13,7 +13,7 @@ return new class extends Migration
     {
         if(!Schema::hasColumn('saving_expenses','account_id')){
             Schema::table('saving_expenses', function (Blueprint $table) {
-                $table->integer('account_id')->after('user_id');
+                $table->integer('account_id')->nullable()->after('user_id');
             });
         }
     }
