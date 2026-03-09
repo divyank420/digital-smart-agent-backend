@@ -96,16 +96,24 @@ class Helper
         /* Last Entry Data */
         $entryData = SavingRmEntries::where(['rm_id' => $rmId])->orderBy('id', 'DESC')->first();
 
-        /* Last Month , Current Month total deposit amount */
-
+        $summary = self::getRmPaymentSummary($rmId);
+        
+        if (!empty($entryData)) {
+            $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
+        }
+        $entrySetup = [
+            'last_entry_data' => $lastEntryData ?? []
+        ];
+        return array_merge($entrySetup,$summary);
+    }
+    public static function getRmPaymentSummary($rmId)
+    {
         $currentMonth = (int)date('m');
         $currentYear = (int)date('Y');
         $lastMonth = (int)date('m', strtotime(date('Y-m-d') . '-1 month'));
         $lastYear = (int)date('Y', strtotime(date('Y-m-d') . '-1 month'));
         $nextMonth = (int)date('m', strtotime(date('Y-m-d') . '+1 month'));
         $nextYear = (int)date('Y', strtotime(date('Y-m-d') . '+1 month'));
-
-
 
         $rowData = SavingRmEntries::join('saving_rms', 'rm_id', '=', 'saving_rms.id')
             ->select(
@@ -116,46 +124,44 @@ class Helper
                 DB::raw('SUM(CASE WHEN payment_month = "' . $nextMonth . '" and payment_year = "' . $nextYear . '" THEN amount else 0 END) AS next_month_deposit'),
             )->where('rm_id', $rmId)
             ->first();
-        //->first();
         $monthly_amount = (int)$rowData->monthly_amount;
         $month = (int)date('m');
         $year = (int)date('Y');
         $lastDepositAmount = (int)$rowData->last_deposit;
         $currentDepositAmount = (int)$rowData->current_deposit;
-
+        $nextDepositAmount = (int)$rowData->next_month_deposit;
+        $trackingMonth = 'current';
         if ($lastDepositAmount < $monthly_amount) {
             $month = $lastMonth;
             $year = $lastYear;
             $remainingAmount = $monthly_amount - $lastDepositAmount;
+            $trackingMonth = 'previous';
+            $deposit = $lastDepositAmount;
         } else if ($currentDepositAmount <= $monthly_amount) {
             $month = $currentMonth;
             $year = $currentYear;
             $remainingAmount = $monthly_amount - $currentDepositAmount;
+            $deposit = $currentDepositAmount;
         } else {
             $month = $nextMonth;
             $year = $nextYear;
             $remainingAmount = $monthly_amount;
-        }
-
-        /* if ($currentDepositAmount >= $monthly_amount) {
-            $month = $month == 12 ? 0 : $month;
-            $year = $month == 12 ? $year + 1 : $year;
-            $remainingAmount = '+' . ($currentDepositAmount - $monthly_amount);
-        } else {
-            $year = $year;
-            $month = $month - 1;
-            $remainingAmount = '-' . ($monthly_amount - $currentDepositAmount);
-        } */
-        if (!empty($entryData)) {
-            $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
+            $trackingMonth = 'advance';
+            $deposit = $nextDepositAmount;
         }
         $entrySetup = [
-            'last_entry_data' => $lastEntryData ?? [],
+            'last_month' => $lastMonth,
+            'last_year' => $lastYear,
+            'current_month' => $currentMonth,
+            'current_year' => $currentYear,
             'month' => $month,
             'year' => $year,
-            'deposit_amount' => $currentDepositAmount,
+            'last_month_deposit' => $lastDepositAmount,
+            'current_month_deposit' => $currentDepositAmount,
+            'deposit_amount' => $deposit,
             'remaining_amount' => $remainingAmount,
             'monthly_amount' => $monthly_amount,
+            'tracking_month' => $trackingMonth
         ];
         return $entrySetup;
     }
@@ -272,7 +278,7 @@ class Helper
     {
         $greeting = "Dear *{$customerName}* 👋, \n\n";
         // Thank you note
-        $thankYou = "\n\n🙏 *Thank you for being with us!* 🙏";
+        $thankYou = "\n🙏 *Thank you for being with us!* 🙏";
         $today = Carbon::today();
         $promos = PromotionalMessage::where('is_active', true)
             ->where(function ($q) use ($today) {

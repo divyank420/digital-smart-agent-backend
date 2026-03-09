@@ -27,11 +27,12 @@ class InstallmentController extends Controller
             sendResponse();
         }
     }
-    public function rmInstallmentEntry(Request $request)
-    {
+    public function rmInstallmentEntry(Request $request){
         $requestData = $request->all();
         try {
-            $rmDetail = SavingRm::with('customer')->where('id', $request->rm_id)->first();
+            $rmDetail = SavingRm::with('customer')
+                ->where('id', $request->rm_id)
+                ->first();
             if (!empty($rmDetail)) {
                 $user = Auth::user();
                 $company_id = $user->company_id;
@@ -40,24 +41,47 @@ class InstallmentController extends Controller
                     ? date('Y-m-d', strtotime($request->entry_date))
                     : date('Y-m-d');
                 $requestData['payment_month'] = $request->payment_month;
-
-                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n*Date*: " . date('d l, Y', strtotime($request->entry_date)) . " 📅\n*Amount*: " . amountFormat($request->amount) . " 💰";
-                $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
-
                 if ($request->amount_type === 'online' && $request->account) {
                     $account = CompanyAccount::where('id', $request->account)
                         ->where('company_id', $user->company_id)
                         ->firstOrFail();
                     $requestData['account_id'] = (int)$request->account ?? null;
                 }
+                /* ---------------- MONTH CALCULATIONS ---------------- */
 
+                $deposits = (object)Helper::getRmPaymentSummary($request->rm_id);
+
+                $lastMonthDeposit = $deposits->last_month_deposit ?? 0;
+                $currentMonthDeposit = $deposits->current_month_deposit ?? 0;
+
+                $monthlyAmount = $rmDetail->monthly_amount;
+                /* ---------------- STATUS ---------------- */
+                $isLastMonthDepositStatus = $lastMonthDeposit >= $monthlyAmount?true:false;
+                $lastMonthStatus = $isLastMonthDepositStatus? "Completed ✅": "Pending ❌";
+                
+                $currentRemaining = $monthlyAmount - $currentMonthDeposit;
+                $currentRemaining = $currentRemaining < 0 ? 0 : $currentRemaining;
+                /* ---------------- MESSAGE ---------------- */
+                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n";
+
+                $message .= "*Date*: " . date('d l, Y', strtotime($requestData['entry_date'])) . " 📅\n";
+                $message .= "*Amount*: " . amountFormat($request->amount) . " 💰\n\n";
+                if(!$isLastMonthDepositStatus){
+                    $message .= "*Last Month Status*: {$lastMonthStatus}\n\n";
+                    $message .= "*Note:* If you have already deposited the full amount for last month, please contact your agent for confirmation.\n";
+                }else{
+                    $message .= "*Current Month Remaining Balance*: " . amountFormat($currentRemaining) . " 💰";
+                }
+                $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
+
+                /* ---------------- WHATSAPP URL ---------------- */
                 $encodedMessage = urlencode($message);
-                $mobileNo = $user->role == 'Developer' ? '7665629201' : $user->mobile;
                 $mobileNo = $rmDetail->customer->mobile;
+                $mobileNo = $user->role == 'Developer' ? '7665629201' : $mobileNo;
                 $redirect_url = "https://wa.me/91{$mobileNo}/?text=" . $encodedMessage;
                 $data = ['redirect_url' => $redirect_url];
+                /* ---------------- SAVE ENTRY ---------------- */
                 SavingRmEntries::create($requestData);
-
                 Helper::sendResponse("Entry Successfully entered", 1, $data);
             } else {
                 Helper::sendResponse("Customer Not found", 0);
