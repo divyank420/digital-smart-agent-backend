@@ -49,6 +49,7 @@ Route::middleware('cors')->group(function () {
         Route::post('edit-rm', [RmController::class, 'editRm']);
         Route::post('delete-rm', [RmController::class, 'deleteRm']);
         Route::get('get-new-rm-code', [RmController::class, 'getNewRmCode']);
+        Route::post('rm-yearly-summary', [RmController::class, 'rmYearlySummary']);
 
         Route::post('rm-entry-list', [RmController::class, 'getRmEntries']);
         Route::post('get-entries-lists', [RmController::class, 'getEntriesList']);
