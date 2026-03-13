@@ -48,6 +48,10 @@ return [
             'driver' => 'jwt',
             'provider' => 'users',
         ],
+        'customer' => [
+            'driver' => 'jwt',
+            'provider' => 'customer',
+        ],
     ],
 
     /*
@@ -71,6 +75,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+
+        'customer' => [
+            'driver' => 'eloquent',
+            'model' => env('AUTH_MODEL', App\Models\SavingCustomer::class),
         ],
 
         // 'users' => [

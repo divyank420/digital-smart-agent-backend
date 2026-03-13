@@ -20,7 +20,8 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class ApiController extends Controller
 {
-    public function register (Request $request){
+    public function register(Request $request)
+    {
         $requestData = $request->all();
         try {
             $validator = Validator::make($request->all(), [
@@ -35,12 +36,12 @@ class ApiController extends Controller
             }
             $requestData['status'] = 1;
             $requestData['role'] = 'Owner';
-            $requestData['password'] = Hash::make(str_replace(' ','',$requestData['password']));
-            $requestData['username'] = explode(' ',$requestData['name'])[0];
+            $requestData['password'] = Hash::make(str_replace(' ', '', $requestData['password']));
+            $requestData['username'] = explode(' ', $requestData['name'])[0];
             $company = SavingCompany::create($requestData);
             $requestData['company_id'] = $company->id;
             $user = User::Create($requestData);
-            return sendResponse('Registration Complated.',200);
+            return sendResponse('Registration Complated.', 200);
         } catch (Exception $e) {
             sendResponse($e->getMessage());
         }
@@ -48,63 +49,66 @@ class ApiController extends Controller
 
     public function login(Request $request)
     {
-        $requestData = $request->all();
         try {
-            $credentials = $request->only('mobile', 'password');
-            
             $guard = 'web';
             $guard = 'users';
             $token = Auth::guard('users')->attempt(['mobile' => $request->mobile, 'password' => $request->password]);
-            if(!$token){
+            if (!$token) {
                 $guard = 'customer';
                 $token = Auth::guard('customer')->attempt(['mobile' => $request->mobile, 'password' => $request->password]);
             }
             try {
                 //if (! $token = JWTAuth::attempt($credentials)) {
                 if (! $token) {
-                    return sendResponse('Login credentials are invalid.',400);
+                    return sendResponse('Login credentials are invalid.', 400);
                 }
             } catch (JWTException $e) {
-                return sendResponse($e->getMessage(),500);
+                return sendResponse($e->getMessage(), 500);
             }
-            
+
             $user = Auth::guard($guard)->user();
-            $agent_lists = User::where('company_id',$user->company_id)->where('id','!=',$user->id)->where('id','!=',1)->pluck('name','id')->toArray();
-            $accounts = CompanyAccount::where('company_id',$user->company_id)->where('is_active',true)->get();
-            $user->agent_list = $agent_lists;
-            $user->accounts = $accounts;
+            if ($guard != 'customer') {
+                $agent_lists = User::where('company_id', $user->company_id)->where('id', '!=', $user->id)->where('id', '!=', 1)->pluck('name', 'id')->toArray();
+                $accounts = CompanyAccount::where('company_id', $user->company_id)->where('is_active', true)->get();
+                $user->agent_list = $agent_lists;
+                $user->accounts = $accounts;
+            }
+            if ($guard == 'customer') {
+                $user->rm_list = SavingRm::select('id','name','account_type','rm_code','monthly_amount','installment_amount','previous_balance')->where('customer_id',$user->id)->get();
+            }
+
             //$user = Auth::user();
 
-            return sendResponse('Login Successful.',200,['token'=>$token,'userData'=>$user]);
+            return sendResponse('Login Successful.', 200, ['token' => $token, 'userData' => $user]);
         } catch (\Throwable $th) {
             sendResponse($th->getMessage());
         }
     }
-    
+
     public function uploadDenomination(Request $request)
     {
         $requestData = $request->all();
         try {
             $user = Auth::user();
             $requestData['company_id'] =  $user->company_id;
-            $requestData['denomination_date'] = date('Y-m-d',strtotime($requestData['denomination_date']))??date('Y-m-d');
-            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id'=>$requestData['company_id']]);
-            if($requestData['user_id'] != '1'){
-                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('user_id',$requestData['user_id']);
+            $requestData['denomination_date'] = date('Y-m-d', strtotime($requestData['denomination_date'])) ?? date('Y-m-d');
+            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id' => $requestData['company_id']]);
+            if ($requestData['user_id'] != '1') {
+                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('user_id', $requestData['user_id']);
             }
 
-            if(isset($requestData['id']) && !empty($requestData['id'])){
-                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('id',$requestData['id']);
+            if (isset($requestData['id']) && !empty($requestData['id'])) {
+                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('id', $requestData['id']);
                 unset($requestData['user_id']);
-            }else{
-                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->whereDate('denomination_date',$requestData['denomination_date']);
+            } else {
+                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->whereDate('denomination_date', $requestData['denomination_date']);
             }
             $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->first();
-            if(!empty($checkAlreadyAddedDenomination)){
-                if($checkAlreadyAddedDenomination->user_id == $user->id){
-                    if($checkAlreadyAddedDenomination->upload_type == 'edit'){
+            if (!empty($checkAlreadyAddedDenomination)) {
+                if ($checkAlreadyAddedDenomination->user_id == $user->id) {
+                    if ($checkAlreadyAddedDenomination->upload_type == 'edit') {
                         $checkAlreadyAddedDenomination->fill($requestData);
-                    }else{
+                    } else {
                         $checkAlreadyAddedDenomination->n_2000 += $requestData['n_2000'];
                         $checkAlreadyAddedDenomination->n_500 += $requestData['n_500'];
                         $checkAlreadyAddedDenomination->n_200 += $requestData['n_200'];
@@ -115,11 +119,10 @@ class ApiController extends Controller
                         $checkAlreadyAddedDenomination->online += $requestData['online'];
                     }
                     $checkAlreadyAddedDenomination->save();
-
-                }else{
+                } else {
                     sendResponse("You cannot update this denomination", 0);
                 }
-            }else{
+            } else {
                 SavingDenomination::create($requestData);
             }
 
@@ -128,7 +131,8 @@ class ApiController extends Controller
             sendResponse($th->getMessage());
         }
     }
-    public function updateDenomination(Request $request){
+    public function updateDenomination(Request $request)
+    {
         try {
             $requestData = $request->all();
             if (isset($request->selected_date) && !empty($request->selected_date)) {
@@ -137,14 +141,14 @@ class ApiController extends Controller
             $user = Auth::user();
 
             $requestData['company_id'] =  $user->company_id;
-            $requestData['denomination_date'] = date('Y-m-d',strtotime($requestData['denomination_date']))??date('Y-m-d');
-            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id'=>$requestData['company_id']])->whereDate('denomination_date',$requestData['denomination_date'])->where('user_id',$user->id)->first();
+            $requestData['denomination_date'] = date('Y-m-d', strtotime($requestData['denomination_date'])) ?? date('Y-m-d');
+            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id' => $requestData['company_id']])->whereDate('denomination_date', $requestData['denomination_date'])->where('user_id', $user->id)->first();
 
-            if(!empty($checkAlreadyAddedDenomination)){
+            if (!empty($checkAlreadyAddedDenomination)) {
                 $checkAlreadyAddedDenomination->fill($requestData);
                 $checkAlreadyAddedDenomination->save();
-                sendResponse('Denomination Updated Successful',1);
-            }else{
+                sendResponse('Denomination Updated Successful', 1);
+            } else {
                 sendResponse('Something went wrong');
             }
         } catch (Exception $e) {
@@ -152,13 +156,15 @@ class ApiController extends Controller
         }
     }
 
-    public function denominationList(Request $request){
+    public function denominationList(Request $request)
+    {
         $userId = $request->user_id ?? Auth::user()->id;
         $date = \Carbon\Carbon::today()->subDays(7);
-        $denominationList = SavingDenomination::where('user_id',$userId)->whereDate('denomination_date','>=',$date)->get();
+        $denominationList = SavingDenomination::where('user_id', $userId)->whereDate('denomination_date', '>=', $date)->get();
         sendResponse('Denomination List', 1, $denominationList);
     }
-    public function denominationDetail(Request $request){
+    public function denominationDetail(Request $request)
+    {
 
         $selectedDate = date('Y-m-d');
         $user = Auth::user();
@@ -166,7 +172,7 @@ class ApiController extends Controller
             $selectedDate = date('Y-m-d', strtotime($request->selected_date));
         }
         //dd($request->all());
-        $request->fetch_type = isset($request->fetch_type)?$request->fetch_type:'daily';
+        $request->fetch_type = isset($request->fetch_type) ? $request->fetch_type : 'daily';
         $data = SavingDenomination::select([
             'id',
             'user_id',
@@ -187,33 +193,33 @@ class ApiController extends Controller
             DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10 ELSE 0 END) as n_10'),
             DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10*10 ELSE 0 END) as n_10_value'),
         ])
-        ->where('company_id',$user->company_id)
-        ->whereDate('denomination_date', date('Y-m-d', strtotime($selectedDate)));
+            ->where('company_id', $user->company_id)
+            ->whereDate('denomination_date', date('Y-m-d', strtotime($selectedDate)));
 
-        $expenses = SavingExpenses::where(['company_id'=>$user->company_id,'expenses_type'=>'Others'])->whereDate('created_at', date('Y-m-d', strtotime($selectedDate)));;
+        $expenses = SavingExpenses::where(['company_id' => $user->company_id, 'expenses_type' => 'Others'])->whereDate('created_at', date('Y-m-d', strtotime($selectedDate)));;
 
 
-        if($request->fetch_type == 'edit' || $user->role != 'Developer' && (isset($request->fetch_type) && $request->fetch_type != 'report')){
+        if ($request->fetch_type == 'edit' || $user->role != 'Developer' && (isset($request->fetch_type) && $request->fetch_type != 'report')) {
             $data = $data->where('user_id', $request->user_id);
             $expenses = $expenses->where('user_id', $request->user_id);
         }
 
-        
+
         $totalExpenses = $expenses->sum('amount');
         $data = $data->first();
-        if(
+        if (
             ($data->online == null || $data->online == 0) &&
-            ($data->n_2000 == null || $data->n_2000 == 0) && 
-            ($data->n_500 == null || $data->n_500 == 0) && 
-            ($data->n_200 == null || $data->n_200 == 0) && 
-            ($data->n_100 == null || $data->n_100 == 0) && 
-            ($data->n_50 == null || $data->n_50 == 0) && 
-            ($data->n_20 == null || $data->n_20 == 0) && 
+            ($data->n_2000 == null || $data->n_2000 == 0) &&
+            ($data->n_500 == null || $data->n_500 == 0) &&
+            ($data->n_200 == null || $data->n_200 == 0) &&
+            ($data->n_100 == null || $data->n_100 == 0) &&
+            ($data->n_50 == null || $data->n_50 == 0) &&
+            ($data->n_20 == null || $data->n_20 == 0) &&
             ($data->n_10 == null || $data->n_10 == 0)
-        ){
-            sendResponse('Denomination not found',0);
-        }else{
-            sendResponse('Denomination Detail', 1, $data,['total_expenses'=>$totalExpenses]);
+        ) {
+            sendResponse('Denomination not found', 0);
+        } else {
+            sendResponse('Denomination Detail', 1, $data, ['total_expenses' => $totalExpenses]);
         }
     }
     public function rmEntryDetails(Request $request)
@@ -232,18 +238,17 @@ class ApiController extends Controller
             $user = Auth::user();
             $code = $request->scan_code;
             $codeArray = explode('@:@', $code);
-            $id = explode('.',end($codeArray))[0];
-            if(!empty($id)){
-                $RmData = SavingRm::where(['company_id'=>$user->company_id,'customer_id'=>$id])->get()->map->formatData();
+            $id = explode('.', end($codeArray))[0];
+            if (!empty($id)) {
+                $RmData = SavingRm::where(['company_id' => $user->company_id, 'customer_id' => $id])->get()->map->formatData();
                 if (!empty($RmData)) {
                     sendResponse("RM Detail", 1, $RmData);
                 } else {
                     sendResponse('Wrong Qr Code');
                 }
-            }else{
+            } else {
                 sendResponse();
             }
-
         } catch (\Throwable $th) {
             //throw $th;
         }
@@ -261,43 +266,41 @@ class ApiController extends Controller
                 'reason' => 'required',
             ]);
             if ($validator->fails()) {
-                $error = Helper::ValidationSet($validator->errors(),422);
+                $error = Helper::ValidationSet($validator->errors(), 422);
             }
             $requestData['company_id'] = Auth::user()->company_id;
             SavingExpenses::create($requestData);
             sendResponse("Expences Successfully Added", 1);
         } catch (\Throwable $th) {
-            sendResponse($th->getMessage(),500);
+            sendResponse($th->getMessage(), 500);
         }
     }
 
-    public function expencesList(Request $request){
+    public function expencesList(Request $request)
+    {
         $requestData = $request->all();
         try {
 
             $user = Auth::user();
-            $expenses = SavingExpenses::where('company_id',$user->company_id)
-            ->whereMonth('created_at',$request->month)
-            ->whereYear('created_at',$request->year);
-            if($request->amount_type != ''){
-                $expenses = $expenses->where('amount_type',$request->amount_type);
+            $expenses = SavingExpenses::where('company_id', $user->company_id)
+                ->whereMonth('created_at', $request->month)
+                ->whereYear('created_at', $request->year);
+            if ($request->amount_type != '') {
+                $expenses = $expenses->where('amount_type', $request->amount_type);
             }
-            if($request->expenses_type != ''){
-                $expenses = $expenses->where('expenses_type',$request->expenses_type);
+            if ($request->expenses_type != '') {
+                $expenses = $expenses->where('expenses_type', $request->expenses_type);
             }
 
-            $expenses = $expenses->orderBy('created_at',$request->sort ?? 'desc');
-            $expenses = $expenses->get()->map->formatData() ;
-            if(!empty($expenses)){
-                sendResponse("Expences List", 1,$expenses);
-            }else{
-                sendResponse("Expences List", 1,$expenses);
+            $expenses = $expenses->orderBy('created_at', $request->sort ?? 'desc');
+            $expenses = $expenses->get()->map->formatData();
+            if (!empty($expenses)) {
+                sendResponse("Expences List", 1, $expenses);
+            } else {
+                sendResponse("Expences List", 1, $expenses);
             }
         } catch (\Throwable $th) {
             sendResponse($th->getMessage());
         }
     }
-
-
 }
-

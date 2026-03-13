@@ -23,30 +23,32 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// Apply CORS middleware to all API routes
+Route::middleware('cors')->group(function () {
+    Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+        return $request->user();
+    });
 
-Route::get('check', function(){
-    return json_encode(['hello'=>'adsfdf']);
-});
-Route::any('get-pending-account-lists', [RmController::class, 'getPendingAccountsList']);
-Route::group(['middleware'=>'cors'], function () {
+    Route::get('check', function () {
+        return json_encode(['hello' => 'adsfdf']);
+    });
+    Route::any('get-pending-account-lists', [RmController::class, 'getPendingAccountsList']);
+    
     Route::post('login', [ApiController::class, 'login']);
     Route::post('register', [ApiController::class, 'register']);
-    Route::middleware('jwt.verify')->group(function() {
+    Route::middleware('jwt.verify')->group(function () {
         Route::any('dashboard', [DashboardController::class, 'dashboard']);
         Route::post('dashboard-summary', [DashboardController::class, 'getDashboardSummary']);
 
         /* Rm */
-        
+
         Route::get('get-rm-list', [RmController::class, 'getRmList']);
         Route::post('add-new-rm', [RmController::class, 'newRm']);
         Route::any('rm-detail', [RmController::class, 'rmDetail']);
         Route::post('edit-rm', [RmController::class, 'editRm']);
         Route::post('delete-rm', [RmController::class, 'deleteRm']);
         Route::get('get-new-rm-code', [RmController::class, 'getNewRmCode']);
-        
+
         Route::post('rm-entry-list', [RmController::class, 'getRmEntries']);
         Route::post('get-entries-lists', [RmController::class, 'getEntriesList']);
         Route::post('get-last-entry', [RmController::class, 'getLastEntry']);
@@ -56,18 +58,18 @@ Route::group(['middleware'=>'cors'], function () {
         Route::Post('rm-edit-entry', [InstallmentController::class, 'editInstallmentEnter']);
         Route::Post('delete-rm-entry', [InstallmentController::class, 'deleteInstallment']);
         Route::Post('restore-rm-entry', [InstallmentController::class, 'restoreInstallment']);
-        
+
 
         Route::Post('upload-denomination', [ApiController::class, 'uploadDenomination']);
         Route::Post('update-denomination', [ApiController::class, 'updateDenomination']);
         Route::any('denomination-detail', [ApiController::class, 'denominationDetail']);
         Route::any('denomination-list', [ApiController::class, 'denominationList']);
-        
+
         Route::Post('add-expences', [ApiController::class, 'addExpences']);
         Route::Post('expenses-list', [ApiController::class, 'expencesList']);
-        
+
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
-        
+
         /* Reports */
         Route::any('report-dashboard', [ReportsController::class, 'reportDashboard']);
         Route::any('get-overall-report', [ReportsController::class, 'getOverAllReport']);
@@ -77,11 +79,10 @@ Route::group(['middleware'=>'cors'], function () {
         Route::post('get-entries-report-lists', [RmController::class, 'getEntriesReportList']);
 
         //Route::post('customer-dashboard', [CustomersController::class, 'dashboard']);
-        Route::controller(CustomersController::class)->group(function(){
+        Route::controller(CustomersController::class)->group(function () {
             Route::get('customer-dashboard', 'dashboard')->name('customerDashbaord');
             Route::get('customer-portfolio', 'portfolio')->name('customerPortfolio');
         });
-
     });
 
     Route::get('generate-pdf-report', [ReportsController::class, 'generatePdfReport'])->name('api.collection_pdf_report');
@@ -92,4 +93,10 @@ Route::group(['middleware'=>'cors'], function () {
         //Route::any('dashboard', [AdminDashboardController::class, 'dashboard']);
         Route::get('/get-denomination',  [DenominationController::class, 'getDenominationList'])->name('getDenominationList');
     });
+});
+
+// Customer App Apis
+Route::prefix('customer')->group(function () {
+    Route::post('login', [ApiController::class, 'login']);
+    Route::post('yearly-report-summary', [CustomersController::class, 'yearlyReportSummary']);
 });
