@@ -349,4 +349,11 @@ class RmController extends Controller
         }
         sendResponse('No Data Found');
     }
+
+    public function rmYearlySummary(Request $request)
+    {
+        $year = $request->year ?? date('Y');
+        $entries = SavingRmEntries::select('payment_month', DB::raw("sum(amount) amount"),)->where('rm_id', $request->rm_id)->where('payment_year', $year)->groupBy('payment_month')->get();
+        return Helper::sendResponse("Yearly Report", 1, $entries);
+    }
 }
