@@ -6,6 +6,7 @@ namespace App\Helper;
 
 use App\Models\CompanyAccount;
 use App\Models\PromotionalMessage;
+use App\Models\RmMonthlyAmountHistory;
 use Illuminate\Support\Facades\DB;
 use Image;
 use App\Models\SavingDenomination;
@@ -97,16 +98,115 @@ class Helper
         $entryData = SavingRmEntries::where(['rm_id' => $rmId])->orderBy('id', 'DESC')->first();
 
         $summary = self::getRmPaymentSummary($rmId);
-        
+
         if (!empty($entryData)) {
             $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
         }
         $entrySetup = [
             'last_entry_data' => $lastEntryData ?? []
         ];
-        return array_merge($entrySetup,$summary);
+        return array_merge($entrySetup, $summary);
     }
     public static function getRmPaymentSummary($rmId)
+    {
+        $now = now();
+        $currentMonth = (int)$now->month;
+        $currentYear = (int)$now->year;
+        $lastMonth = (int)$now->copy()->subMonth()->month;
+        $lastYear = (int)$now->copy()->subMonth()->year;
+        $nextMonth = (int)$now->copy()->addMonth()->month;
+        $nextYear = (int)$now->copy()->addMonth()->year;
+
+        $rowData = SavingRmEntries::leftJoin('saving_rms', 'rm_id', '=', 'saving_rms.id')
+            ->where('rm_id', $rmId)
+            ->select(
+                'rm_id',
+                DB::raw('SUM(amount) as total_deposit'),
+
+                DB::raw("
+                SUM(CASE 
+                    WHEN payment_month = $lastMonth 
+                    AND payment_year = $lastYear 
+                    THEN amount ELSE 0 
+                END) as last_deposit
+            "),
+
+                DB::raw("
+                SUM(CASE 
+                    WHEN payment_month = $currentMonth 
+                    AND payment_year = $currentYear 
+                    THEN amount ELSE 0 
+                END) as current_deposit
+            "),
+
+                DB::raw("
+                SUM(CASE 
+                    WHEN payment_month = $nextMonth 
+                    AND payment_year = $nextYear 
+                    THEN amount ELSE 0 
+                END) as next_month_deposit
+            ")
+            )
+            ->first();
+        // deposit values
+        $lastDepositAmount = (int)($rowData->last_deposit ?? 0);
+        $currentDepositAmount = (int)($rowData->current_deposit ?? 0);
+        $nextDepositAmount = (int)($rowData->next_month_deposit ?? 0);
+
+        // load monthly amount history once
+        $history = Helper::getEffectiveMonthlyAmount($rmId, null, null, 'all');
+
+        $rm = SavingRm::find($rmId);
+        $openMonth = (int)$rm->open_month;
+        $openYear = (int)$rm->open_year;
+
+        // resolve monthly amounts
+        $previousMonthlyAmount = Helper::resolveMonthlyAmount($history, $rm->monthly_amount, $lastMonth, $lastYear);
+        $currentMonthlyAmount = Helper::resolveMonthlyAmount($history, $rm->monthly_amount, $currentMonth, $currentYear);
+        $nextMonthlyAmount = Helper::resolveMonthlyAmount($history, $rm->monthly_amount, $nextMonth, $nextYear);
+
+        $trackingMonth = 'current';
+
+        $lastMonthValid = !($lastYear < $openYear || ($lastYear == $openYear && $lastMonth < $openMonth));
+
+        if ($lastMonthValid && $lastDepositAmount < $previousMonthlyAmount) {
+
+            $month = $lastMonth;
+            $year = $lastYear;
+            $remainingAmount = $previousMonthlyAmount - $lastDepositAmount;
+            $deposit = $lastDepositAmount;
+            $trackingMonth = 'previous';
+        } elseif ($currentDepositAmount < $currentMonthlyAmount) {
+
+            $month = $currentMonth;
+            $year = $currentYear;
+            $remainingAmount = $currentMonthlyAmount - $currentDepositAmount;
+            $deposit = $currentDepositAmount;
+        } else {
+
+            $month = $nextMonth;
+            $year = $nextYear;
+            $remainingAmount = $nextMonthlyAmount;
+            $deposit = $nextDepositAmount;
+            $trackingMonth = 'advance';
+        }
+
+        return [
+            'month' => $month,
+            'year' => $year,
+            'last_month' => $lastMonth,
+            'last_year' => $lastYear,
+            'current_month' => $currentMonth,
+            'current_year' => $currentYear,
+            'last_month_deposit' => $lastDepositAmount,
+            'current_month_deposit' => $currentDepositAmount,
+            'deposit_amount' => $deposit,
+            'remaining_amount' => $remainingAmount,
+            'monthly_amount' => $currentMonthlyAmount,
+            'tracking_month' => $trackingMonth
+        ];
+    }
+    public static function getRmPaymentSummary_old($rmId)
     {
         $currentMonth = (int)date('m');
         $currentYear = (int)date('Y');
@@ -115,7 +215,7 @@ class Helper
         $nextMonth = (int)date('m', strtotime(date('Y-m-d') . '+1 month'));
         $nextYear = (int)date('Y', strtotime(date('Y-m-d') . '+1 month'));
 
-        $rowData = SavingRmEntries::join('saving_rms', 'rm_id', '=', 'saving_rms.id')
+        $rowData = SavingRmEntries::leftJoin('saving_rms', 'rm_id', '=', 'saving_rms.id')
             ->select(
                 DB::raw('CAST(sum(amount) as INT) as total_deposit'),
                 'monthly_amount',
@@ -124,17 +224,21 @@ class Helper
                 DB::raw('SUM(CASE WHEN payment_month = "' . $nextMonth . '" and payment_year = "' . $nextYear . '" THEN amount else 0 END) AS next_month_deposit'),
             )->where('rm_id', $rmId)
             ->first();
-        $monthly_amount = (int)$rowData->monthly_amount;
         $month = (int)date('m');
         $year = (int)date('Y');
+
+        $monthlyAmountHistory = Helper::getEffectiveMonthlyAmount($rowData->rm_id, null, null, 'all');
+
+        $previous_monthly_amount = Helper::resolveMonthlyAmount($monthlyAmountHistory, 0, $lastMonth, $lastYear);
+        $monthly_amount = Helper::resolveMonthlyAmount($monthlyAmountHistory, 0, $currentMonth, $currentYear);
         $lastDepositAmount = (int)$rowData->last_deposit;
         $currentDepositAmount = (int)$rowData->current_deposit;
         $nextDepositAmount = (int)$rowData->next_month_deposit;
         $trackingMonth = 'current';
-        if ($lastDepositAmount < $monthly_amount) {
+        if ($lastDepositAmount < $previous_monthly_amount) {
             $month = $lastMonth;
             $year = $lastYear;
-            $remainingAmount = $monthly_amount - $lastDepositAmount;
+            $remainingAmount = $previous_monthly_amount - $lastDepositAmount;
             $trackingMonth = 'previous';
             $deposit = $lastDepositAmount;
         } else if ($currentDepositAmount <= $monthly_amount) {
@@ -360,5 +464,76 @@ class Helper
             $account->save();
         });
     }
-    public static function generateActivity() {}
+
+    public static function getEffectiveMonthlyAmount($rmId, $month = null, $year = null, $mode = 'single', $active = true)
+    {
+        // Return all history records
+        if ($mode === 'all') {
+            $history = RmMonthlyAmountHistory::where('rm_id', $rmId)
+                ->orderBy('effective_year')
+                ->orderBy('effective_month');
+            if ($active) {
+
+                $history = $history->where('status', 1);
+            }
+            $history = $history->get();
+            return $history;
+        }
+
+        // Default to current month/year if not provided
+        $month = $month ?? date('m');
+        $year  = $year ?? date('Y');
+
+        $query = RmMonthlyAmountHistory::where('rm_id', $rmId)
+            ->where(function ($q) use ($month, $year) {
+                $q->where('effective_year', '<', $year)
+                    ->orWhere(function ($q2) use ($month, $year) {
+                        $q2->where('effective_year', $year)
+                            ->where('effective_month', '<=', $month);
+                    });
+            })
+            ->where('status', 1)
+            ->orderByDesc('effective_year')
+            ->orderByDesc('effective_month');
+
+        if ($active) {
+            $history = $query->where('status', 1);
+        }
+
+        // If caller wants query builder
+        if ($mode === 'query') {
+            return $query;
+        }
+
+        // Default: single record
+        $change = $query->first();
+        if ($change) {
+            return $change->monthly_amount;
+        }
+
+        return SavingRm::where('id', $rmId)->value('monthly_amount');
+    }
+
+    public static function resolveMonthlyAmount($history, $defaultAmount, $month, $year)
+    {
+        $amount = $defaultAmount;
+        foreach ($history as $row) {
+            if (
+                $row->effective_year < $year ||
+                ($row->effective_year == $year && $row->effective_month <= $month)
+            ) {
+                $amount = $row->monthly_amount;
+            }
+        }
+
+        return $amount;
+    }
+
+    public static function getRmMonthlyAmountHistory($rmId)
+    {
+        return RmMonthlyAmountHistory::where('rm_id', $rmId)
+            ->orderBy('effective_year')
+            ->orderBy('effective_month')
+            ->get();
+    }
 }

@@ -40,6 +40,7 @@ Route::prefix('/agent')->name('agent.')->group(function () {
         });
         Route::prefix('entries')->group(function () {
             Route::get('',  [EntriesController::class, 'index'])->name('entries');
+            Route::get('corrupted-rm-entries', [EntriesController::class,'corruptedEntries']);
         });
 
         Route::prefix('reports')->group(function () {

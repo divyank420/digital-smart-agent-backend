@@ -4,6 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
+use App\Models\RmMonthlyAmountHistory;
 use App\Models\SavingExpenses;
 use App\Models\SavingRm;
 use App\Models\SavingCustomer;
@@ -61,6 +62,15 @@ class RmController extends Controller
             $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
             $rmData->save();
 
+            RmMonthlyAmountHistory::create([
+                'rm_id' => $rmData->id,
+                'effective_month' => $request->opening_month ?? date('m'),
+                'effective_year' => $request->opening_year ?? date('Y'),
+                'monthly_amount' => $request->monthly_amount,
+                'installment_amount' => $request->installment_amount
+            ]);
+
+
             DB::commit();
             Helper::sendResponse("Rm Successfully Added", 200);
         } catch (\Throwable $th) {
@@ -69,7 +79,10 @@ class RmController extends Controller
         }
     }
 
-    public function addSubRmAccount(Request $request) {}
+    public function addSubRmAccount(Request $request)
+    {
+        pr($request->all());
+    }
 
     public function rmDetail(Request $request)
     {
@@ -143,7 +156,8 @@ class RmController extends Controller
             if (File::exists(public_path('rm/qrcodes/' . $rmData->qr_code))) {
                 File::delete(public_path('rm/qrcodes/' . $rmData->qr_code));
             }
-            $rmData->forceDelete();
+            //$rmData->forceDelete();
+            $rmData->delete();
         }
         Helper::sendResponse("Rm Successfully Deleted", 1);
     }
@@ -292,11 +306,6 @@ class RmController extends Controller
             $rmId = $request->rm_id;
         }
         try {
-            $currentMonth = date('m');
-            $currentYear = date('Y');
-            $lastMonth = date('m', strtotime(date('Y-m-d') . '-1 month'));
-            $lastYear = date('Y', strtotime(date('Y-m-d') . '-1 month'));
-
             $entrySetup = Helper::getLastEntry($rmId);
             if (!empty($entrySetup)) {
                 Helper::sendResponse('Last Entry Data', 1, $entrySetup);
@@ -361,7 +370,79 @@ class RmController extends Controller
     public function rmYearlySummary(Request $request)
     {
         $year = $request->year ?? date('Y');
-        $entries = SavingRmEntries::select('payment_month', DB::raw("sum(amount) amount"),)->where('rm_id', $request->rm_id)->where('payment_year', $year)->groupBy('payment_month')->get();
-        return Helper::sendResponse("Yearly Report", 1, $entries);
+        $rmId = $request->rm_id;
+
+        // deposits grouped by month
+        $entries = SavingRmEntries::select(
+            'payment_month',
+            DB::raw("SUM(amount) as amount")
+        )
+            ->where('rm_id', $rmId)
+            ->where('payment_year', $year)
+            ->groupBy('payment_month')
+            ->pluck('amount', 'payment_month');
+
+        // RM
+        $rm = SavingRm::find($rmId);
+
+        // history
+        $history = $rm->monthlyAmountHistory;
+
+        $result = [];
+
+        for ($month = 1; $month <= 12; $month++) {
+
+            $expectedAmount = Helper::resolveMonthlyAmount(
+                $history,
+                $rm->getRawOriginal('monthly_amount'),
+                $month,
+                $year
+            );
+
+            $deposit = $entries[$month] ?? 0;
+
+            $result[] = [
+                'payment_month' => $month,
+                'monthly_amount' => $expectedAmount,
+                'amount' => (int)$deposit,
+                'remaining' => $expectedAmount - $deposit
+            ];
+        }
+
+        return Helper::sendResponse("Yearly Report", 1, $result);
+    }
+
+    public function saveRmMonthlyAmountHistory(Request $request)
+    {
+
+        if (isset($request->id) && !empty($request->id)) {
+            $record = RmMonthlyAmountHistory::find($request->id);
+            if ($record) {
+                $record->update([
+                    'rm_id' => $request->rm_id,
+                    'effective_month' => $request->effective_month,
+                    'effective_year' => $request->effective_year,
+                    'monthly_amount' => $request->monthly_amount,
+                    'installment_amount' => $request->installment_amount,
+                    'status' => $request->status,
+                ]);
+            }
+        } else {
+            $record = RmMonthlyAmountHistory::create([
+                'rm_id' => $request->rm_id,
+                'effective_month' => $request->effective_month,
+                'effective_year' => $request->effective_year,
+                'monthly_amount' => $request->monthly_amount,
+                'installment_amount' => $request->installment_amount
+            ]);
+        }
+        return Helper::sendResponse('Monthly Amount successfully save', 1, $record);
+    }
+
+
+    public function fetchRmMonthlyAmountHistory(Request $request)
+    {
+        $history = Helper::getEffectiveMonthlyAmount($request->rm_id, null, null, 'all', false);
+        return Helper::sendResponse('Rm Monthly History', 1, $history);
     }
 }
