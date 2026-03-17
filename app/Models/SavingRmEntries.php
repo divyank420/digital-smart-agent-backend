@@ -35,7 +35,7 @@ class SavingRmEntries extends Model
     }
     public function Agent()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id')->select(['id', 'username']);
+        return $this->belongsTo(User::class, 'user_id', 'id')->select(['id', 'username','name']);
     }
 
     public function companyAccount()
