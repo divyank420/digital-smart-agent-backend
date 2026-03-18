@@ -84,8 +84,6 @@ class PdfReportController extends Controller
 
     public function rmMonthsDepositsReport(Request $request)
     {
-
-        //dd($request->all());
         $requestData = (object)$request->all();
         $monthsArray = explode(',', $requestData->months);
         $monthNames = collect($monthsArray)->map(function ($month) {
@@ -114,7 +112,7 @@ class PdfReportController extends Controller
             . time()
             . '.pdf';
             return $pdf->stream($filename);
-        return $pdf->download($filename);
+            return $pdf->download($filename);
         //dd($request->all(), $groupedEntries);
     }
 }

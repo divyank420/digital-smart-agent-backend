@@ -1,7 +1,7 @@
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
         <div>
-            <img src="{{ asset('agent_panel/images/logo-icon.png') }}" class="logo-icon" alt="logo icon">
+            <img src="{{ asset('agent_panel/images/logo-icon-tran.png') }}" class="logo-icon" alt="Digital Smart Agent">
         </div>
         <div>
             <h4 class="logo-text">DSA</h4>

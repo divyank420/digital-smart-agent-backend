@@ -2,7 +2,7 @@
 @section('content')
 <div class="col mx-auto">
     <div class="mb-4 text-center">
-        <img src="{{ asset('agent_panel/images/logo-icon.png') }}" width="180" alt="" />
+        <img src="{{ asset('agent_panel/images/logo.png') }}" width="200" alt="" />
     </div>
     <div class="card">
             <div class="card-body">

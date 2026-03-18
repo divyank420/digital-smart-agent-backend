@@ -184,13 +184,13 @@
 
         .watermark_2 {
             top: 50%;
-            left: 50%;
+            left: 30%;
             opacity: 0.2;
         }
 
         .watermark_3 {
             top: 80%;
-            left: 50%;
+            left: 70%;
             opacity: 0.1;
         }
 
@@ -225,12 +225,18 @@
 </head>
 
 <body>
-    <div class="watermark watermark_1">Digital Smart Agent <br><small style="font-size: 10px;">Contact Us:
-            +91-7665629201</small></div>
-    <div class="watermark watermark_2">Digital Smart Agent <br><small style="font-size: 10px;">Contact Us:
-            +91-7665629201</small></div>
-    <div class="watermark watermark_3">Digital Smart Agent <br><small style="font-size: 10px;">Contact Us:
-            +91-7665629201</small></div>
+    <div class="watermark watermark_1">
+        <img src="{{ public_path() . '/images/logo.png' }}" alt="Digital Smart Agent"
+            style="width: 150px; height: 40px; border-radius: 43px;">
+    </div>
+    <div class="watermark watermark_2">
+        <img src="{{ public_path() . '/images/logo.png' }}" alt="Digital Smart Agent"
+            style="width: 150px; height: 40px; border-radius: 43px;">
+    </div>
+    <div class="watermark watermark_3">
+        <img src="{{ public_path() . '/images/logo.png' }}" alt="Digital Smart Agent"
+            style="width: 150px; height: 40px; border-radius: 43px;">
+    </div>
     <header>
         <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
             <tr>
