@@ -16,7 +16,7 @@ class SavingRmEntries extends Model
     protected $fillable = ['company_id', 'user_id', 'rm_id', 'account_id', 'transaction_id', 'amount', 'amount_type', 'entry_type', 'payment_month', 'payment_year', 'entry_date'];
 
     protected $casts = [
-        'created_at' => 'date',
+        'created_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -27,7 +27,7 @@ class SavingRmEntries extends Model
      */
     public function RmDetail()
     {
-        return $this->belongsTo(SavingRm::class, 'rm_id', 'id')->select(['id', 'name', 'account_type', 'monthly_amount']);
+        return $this->belongsTo(SavingRm::class, 'rm_id', 'id')->select(['id', 'name', 'account_type', 'monthly_amount', 'rm_code']);
     }
     public function company()
     {
@@ -35,7 +35,7 @@ class SavingRmEntries extends Model
     }
     public function Agent()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id')->select(['id', 'username','name']);
+        return $this->belongsTo(User::class, 'user_id', 'id')->select(['id', 'username', 'name']);
     }
 
     public function companyAccount()
@@ -61,32 +61,44 @@ class SavingRmEntries extends Model
 
     public function formatData()
     {
-
-        $data = [
+        return [
             'id' => $this->id,
-            'name' => $this?->RmDetail?->name,
-            'rm_code' => $this?->RmDetail?->rm_code,
-            'account_type' => ucwords($this?->RmDetail?->account_type),
+            'name' => $this->RmDetail?->name,
+            'rm_code' => $this->RmDetail?->rm_code,
+            'account_type' => $this->RmDetail?->account_type
+                ? ucwords($this->RmDetail->account_type)
+                : null,
+
             'amount_type' => $this->amount_type,
             'entry_type' => $this->entry_type,
             'amount' => $this->amount,
             'account_id' => $this->account_id,
             'payment_month' => $this->payment_month,
             'payment_year' => $this->payment_year,
-            'entry_date' => date('d-M-Y', strtotime($this->entry_date)),
-            'entry_date_key' => date('d-m-Y', strtotime($this->entry_date)),
-            'entry_date_original' => date('Y-m-d', strtotime($this->entry_date)),
-            'entry_time' => date('h:i A', strtotime($this->created_at)),
+
+            'entry_date' => $this->entry_date
+                ? date('d-M-Y', strtotime($this->entry_date))
+                : null,
+
+            'entry_date_key' => $this->entry_date
+                ? date('d-m-Y', strtotime($this->entry_date))
+                : null,
+
+            'entry_date_original' => $this->entry_date
+                ? date('Y-m-d', strtotime($this->entry_date))
+                : null,
+
+            'entry_time' => $this->created_at?->format('h:i A'),
+
             'user_id' => $this->user_id,
             'rm_id' => $this->rm_id,
             'created_at' => $this->created_at,
-            'deleted_at' => $this->deleted_at
+            'deleted_at' => $this->deleted_at,
+
+            'agent' => $this->Agent?->username ?? null,
+
+            'trashed' => method_exists($this, 'trashed') ? $this->trashed() : false,
         ];
-        if (isset($this->Agent)) {
-            $data['agent'] = $this->Agent->username;
-        }
-        $data['trashed'] = method_exists($this, 'trashed') ? $this->trashed() : false;
-        return $data;
     }
     public function excelFormatData()
     {

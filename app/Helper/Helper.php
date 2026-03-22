@@ -16,6 +16,7 @@ use App\Models\SavingExpenses;
 use App\Models\SavingCompany;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Http;
 
 class Helper
 {
@@ -107,8 +108,7 @@ class Helper
         ];
         return array_merge($entrySetup, $summary);
     }
-    public static function getRmPaymentSummary($rmId)
-    {
+    public static function getRmPaymentSummary($rmId){
         $now = now();
         $currentMonth = (int)$now->month;
         $currentYear = (int)$now->year;
@@ -169,14 +169,15 @@ class Helper
 
         $lastMonthValid = !($lastYear < $openYear || ($lastYear == $openYear && $lastMonth < $openMonth));
 
-        if ($lastMonthValid && $lastDepositAmount < $previousMonthlyAmount) {
+        if ($lastMonthValid && ($lastDepositAmount <= $previousMonthlyAmount && $currentDepositAmount == 0)) {
 
             $month = $lastMonth;
             $year = $lastYear;
             $remainingAmount = $previousMonthlyAmount - $lastDepositAmount;
             $deposit = $lastDepositAmount;
             $trackingMonth = 'previous';
-        } elseif ($currentDepositAmount < $currentMonthlyAmount) {
+
+        } elseif ($currentDepositAmount <= $currentMonthlyAmount) {
 
             $month = $currentMonth;
             $year = $currentYear;
@@ -382,7 +383,7 @@ class Helper
     {
         $greeting = "Dear *{$customerName}* 👋, \n\n";
         // Thank you note
-        $thankYou = "\n🙏 *Thank you for being with us!* 🙏";
+        $thankYou = "🙏 *Thank you for being with us!* 🙏";
         $today = Carbon::today();
         $promos = PromotionalMessage::where('is_active', true)
             ->where(function ($q) use ($today) {
@@ -535,5 +536,17 @@ class Helper
             ->orderBy('effective_year')
             ->orderBy('effective_month')
             ->get();
+    }
+    public static function generateShortUrl($url)
+    {
+        try {
+            $response = Http::get("https://tinyurl.com/api-create.php", [
+                'url' => $url
+            ]);
+
+            return $response->body();
+        } catch (\Exception $e) {
+            return $url; // fallback
+        }
     }
 }

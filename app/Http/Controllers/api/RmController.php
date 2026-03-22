@@ -287,10 +287,10 @@ class RmController extends Controller
         try {
             $month = $request->month ?? date('m');
             $year = $request->year ?? date('Y');
-            $rmEntries = SavingRmEntries::with(['Agent'])->where(['rm_id' => $request->rm_id]);
+            $rmEntries = SavingRmEntries::with(['RmDetail','Agent'])->where(['rm_id' => $request->rm_id]);
             $rmEntries = $rmEntries->where(['payment_month' => intval($month), 'payment_year' => intval($year)]);
             $totalAmount = $rmEntries->sum('amount');
-            $rmEntries = $rmEntries->orderBy('created_at', 'DESC')->get()->map->formatData()->toArray();
+            $rmEntries = $rmEntries->orderBy('entry_date', 'DESC')->get()->map->formatData()->toArray();
             if (!empty($rmEntries)) {
                 Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount]);
             } else {

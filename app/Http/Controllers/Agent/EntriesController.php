@@ -43,7 +43,7 @@ class EntriesController extends Controller
             $entries = SavingRmEntries::leftJoin('saving_rms', 'saving_rms.id', '=', 'saving_rm_entries.rm_id')
                 ->leftJoin('saving_customers', 'saving_customers.id', '=', 'saving_rm_entries.user_id')
                 ->select(
-                    'saving_rm_entries.id',
+                    'saving_rm_entries.id as entry_id',
                     'saving_rm_entries.amount',
                     'saving_rm_entries.entry_date',
                     'saving_rm_entries.rm_id',

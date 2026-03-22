@@ -27,67 +27,131 @@ class InstallmentController extends Controller
             sendResponse();
         }
     }
-    public function rmInstallmentEntry(Request $request){
+
+    public function rmInstallmentEntry(Request $request)
+    {
         $requestData = $request->all();
         try {
-            $rmDetail = SavingRm::with('customer')
-                ->where('id', $request->rm_id)
-                ->first();
-            if (!empty($rmDetail)) {
+            //return DB::transaction(function () use ($request, $requestData) {
+
+                $rmDetail = SavingRm::with('customer')
+                    ->where('id', $request->rm_id)
+                    ->first();
+
+                if (empty($rmDetail)) {
+                    return Helper::sendResponse("Customer Not found", 0);
+                }
                 $user = Auth::user();
-                $company_id = $user->company_id;
-                $requestData['company_id'] = $company_id;
+                /* ---------------- BASIC DATA ---------------- */
+                $requestData['company_id'] = $user->company_id;
+
                 $requestData['entry_date'] = $request->entry_date
                     ? date('Y-m-d', strtotime($request->entry_date))
                     : date('Y-m-d');
+
                 $requestData['payment_month'] = $request->payment_month;
+
                 if ($request->amount_type === 'online' && $request->account) {
-                    $account = CompanyAccount::where('id', $request->account)
+                    CompanyAccount::where('id', $request->account)
                         ->where('company_id', $user->company_id)
                         ->firstOrFail();
-                    $requestData['account_id'] = (int)$request->account ?? null;
+
+                    $requestData['account_id'] = (int)$request->account;
                 }
-                /* ---------------- MONTH CALCULATIONS ---------------- */
 
-                $deposits = (object)Helper::getRmPaymentSummary($request->rm_id);
+                /* ---------------- BEFORE SUMMARY ---------------- */
+                $before = (object) Helper::getRmPaymentSummary($request->rm_id);
 
-                $lastMonthDeposit = $deposits->last_month_deposit ?? 0;
-                $currentMonthDeposit = $deposits->current_month_deposit ?? 0;
-
-                $monthlyAmount = $rmDetail->monthly_amount;
-                /* ---------------- STATUS ---------------- */
-                $isLastMonthDepositStatus = $lastMonthDeposit >= $monthlyAmount?true:false;
-                $lastMonthStatus = $isLastMonthDepositStatus? "Completed ✅": "Pending ❌";
-                
-                $currentRemaining = $monthlyAmount - $currentMonthDeposit;
-                $currentRemaining = $currentRemaining < 0 ? 0 : $currentRemaining;
-                /* ---------------- MESSAGE ---------------- */
-                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n\n";
-
-                $message .= "*Date*: " . date('d l, Y', strtotime($requestData['entry_date'])) . " 📅\n";
-                $message .= "*Amount*: " . amountFormat($request->amount) . " 💰\n\n";
-                if(!$isLastMonthDepositStatus){
-                    $message .= "*Last Month Status*: {$lastMonthStatus}\n\n";
-                    $message .= "*Note:* If you have already deposited the full amount for last month, please contact your agent for confirmation.\n";
-                }else{
-                    $message .= "*Current Month Remaining Balance*: " . amountFormat($currentRemaining) . " 💰";
-                }
-                $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
-
-                /* ---------------- WHATSAPP URL ---------------- */
-                $encodedMessage = urlencode($message);
-                $mobileNo = $rmDetail->customer->mobile;
-                $mobileNo = $user->role == 'Developer' ? '7665629201' : $mobileNo;
-                $redirect_url = "https://wa.me/91{$mobileNo}/?text=" . $encodedMessage;
-                $data = ['redirect_url' => $redirect_url];
                 /* ---------------- SAVE ENTRY ---------------- */
                 SavingRmEntries::create($requestData);
-                Helper::sendResponse("Entry Successfully entered", 1, $data);
-            } else {
-                Helper::sendResponse("Customer Not found", 0);
-            }
+
+                /* ---------------- AFTER SUMMARY ---------------- */
+                $after = (object) Helper::getRmPaymentSummary($request->rm_id);
+
+                /* ---------------- ✅ FIXED COMPLETION LOGIC ---------------- */
+                $completedMonth = null;
+                $isReportEnable = false;
+
+                if (($after->tracking_month == 'current' && $after->remaining_amount == 0) ||
+                    ($after->tracking_month == 'previous' && $after->remaining_amount == 0)
+                ) {
+                    $isReportEnable = true;
+                }
+
+                //dd($before, $after, $isReportEnable);
+                /* ---------------- CURRENT STATE ---------------- */
+
+                $remainingAmount = $after->remaining_amount ?? 0;
+                $monthlyAmount   = $after->monthly_amount ?? 0;
+                $trackingMonth   = $after->tracking_month ?? 'current';
+                $month           = $after->month;
+                $year            = $after->year;
+
+                //dd($before,$after);
+
+                /* ---------------- MESSAGE ---------------- */
+
+                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n";
+                $message .= "*===============================* \n";
+                $message .= "*Transaction* \n";
+                $message .= "*Date*: " . date('d l, Y', strtotime($requestData['entry_date'])) . " 📅\n";
+                $message .= "*Amount*: " . amountFormat($request->amount) . " 💰\n";
+                $message .= "*===============================* \n";
+                $monthTitle = date('F Y', strtotime("$year-$month-01"));
+
+                if ($trackingMonth === 'previous') {
+
+                    $message .= "*Running Month*: " . $monthTitle . "\n";
+                    $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰\n";
+                    $message .= "*" . $monthTitle . " Status*: Pending ❌";
+                } elseif ($trackingMonth === 'current') {
+                    if ($remainingAmount > 0) {
+                        $message .= "*Running Month*: " . $monthTitle . "\n";
+                        $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰";
+                    } else {
+                        $message .= "*" . $monthTitle . " Status*: Completed ✅";
+                    }
+                } else {
+                    $message .= "*Advance Payment For*: " . $monthTitle . "\n";
+                    $message .= "*Next Installment*: " . amountFormat($monthlyAmount) . " 💰";
+                }
+                /* ---------------- ✅ REPORT LINK (FIXED) ---------------- */
+
+                if ($isReportEnable) {
+                    $reportUrl = url('api/rm-current-month-deposit-report') . '?' . http_build_query([
+                        'key' => $request->rm_id,
+                        'year'  => $year,
+                        'month' => $month
+                    ]);
+
+                    $shortUrl = Helper::generateShortUrl($reportUrl);
+
+                    $message .= "\n\n🎉 *" . $monthTitle . " Completed!*\n";
+                    $message .= "📄 *Deposit History*: " . $shortUrl . " 🔗 \n\n";
+                    $message .= "⬆️ Click the link above to view your complete *" . $monthTitle . "* deposit history.";
+                }
+
+                /* ---------------- FINAL MESSAGE ---------------- */
+
+                $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
+
+                /* ---------------- WHATSAPP ---------------- */
+
+                $encodedMessage = urlencode($message);
+
+                $mobileNo = $rmDetail->customer->mobile;
+                $mobileNo = $user->role == 'Developer' ? '7665629201' : $mobileNo;
+
+                $redirect_url = $mobileNo
+                    ? "https://wa.me/91{$mobileNo}?text=" . $encodedMessage
+                    : "https://wa.me/?text=" . $encodedMessage;
+
+                return Helper::sendResponse("Entry Successfully entered", 1, [
+                    'redirect_url' => $redirect_url
+                ]);
+            //});
         } catch (\Throwable $th) {
-            Helper::sendResponse($th->getMessage());
+            return Helper::sendResponse($th->getMessage(), 0);
         }
     }
     public function editInstallmentEnter(Request $request)

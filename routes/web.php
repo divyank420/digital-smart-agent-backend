@@ -40,6 +40,7 @@ Route::get('/send-mail', function () {
 });
 
 Route::get('generate-pdf', [UsersController::class, 'index']);
+Route::get('rm-deposit-generate-pdf', [UsersController::class, 'index']);
 Route::get('entries-excel', [UsersController::class, 'getEntriesExcel']);
 Route::get('/clear', function () {
     Artisan::call('optimize:clear');

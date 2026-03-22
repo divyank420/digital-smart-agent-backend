@@ -93,6 +93,7 @@ Route::middleware('cors')->group(function () {
     Route::get('monthly-posting-report', [PdfReportController::class, 'monthlyPostingReport']);
     Route::get('customer-installment-report', [PdfReportController::class, 'getCustomerInstallmentReport']);
     Route::get('rm-months-deposits-report', [PdfReportController::class, 'rmMonthsDepositsReport']);
+    Route::get('rm-current-month-deposit-report', [PdfReportController::class, 'rmCurrentMonthDepositReport']);
 
     Route::prefix('agent')->group(function () {
         //Route::any('dashboard', [AdminDashboardController::class, 'dashboard']);

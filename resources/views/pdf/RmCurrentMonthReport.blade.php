@@ -50,20 +50,18 @@
         }
 
         .receipt-main thead {
-            background:#001d41 none repeat scroll 0 0;
+            background: #001d41 none repeat scroll 0 0;
         }
 
         .receipt-main thead th {
             color: #fff;
-            
+
         }
 
         .receipt-right h5 {
             font-size: 16px;
             font-weight: bold;
             margin: 0 0 7px 0;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 3px;
         }
 
         .receipt-right p {
@@ -246,7 +244,7 @@
                         style="width: 150px; height: 40px; border-radius: 43px;">
                 </td>
                 <td style="width: 50%; text-align: right; vertical-align: middle;">
-                    <h3 style="margin: 0; font-weight: 500; font-size: 14px;">PAYMENT DEPOSIT SUMMARY</h3>
+                    <h3 style="margin: 0; font-weight: 500; font-size: 14px;">DEPOSIT SUMMARY</h3>
                     <p style="margin: 2px 0 0; font-size: 12px; font-weight: 600;">
                         {{ $report_period }}
                     </p>
@@ -264,18 +262,18 @@
                             <div class="receipt-right">
                                 <h5>{{ $company->firm_name }}</h5>
                                 <p><b>Agent :</b> {{ $company->agent_name }}</p>
-                                <p><b>Email :</b> {{ $company->email }}</p>
                                 <p><b>Mobile :</b> {{ $company->mobile }}</p>
+                                <p><b>Email :</b> {{ $company->email }}</p>
                             </div>
                         </td>
 
                         <!-- CENTER: Customer -->
-                        <td style="width: 33%; vertical-align: top; text-align: center;">
-                            <div class="receipt-right">
+                        <td style="width: 33%; vertical-align: top; text-align: left;">
+                            <div class="receipt-right" style="padding-left:10px">
                                 <h5>Customer Detail</h5>
-                                <p>{{ $rm->name }}</p>
-                                <p>{{ $rm->customer->mobile }}</p>
-                                <p>{{ $rm->customer->email ?? '-' }}</p>
+                                <p><b>Name :</b> {{ $rm->name }}</p>
+                                <p><b>Mobile :</b> {{ $rm->customer->mobile }}</p>
+                                <p><b>Email :</b> {{ $rm->customer->email ?? '-' }}</p>
                             </div>
                         </td>
 
@@ -291,64 +289,53 @@
                     </tr>
                 </table>
             </div>
-            @foreach ($groupedEntries as $month => $monthEntries)
-                <div style="margin-bottom: 15px; border: 1px solid #ccc;">
-
-                    <!-- Month Title -->
-                    <h4 style="margin: 0 0 5px 0; background: #001d41; color:#fff; padding: 5px; text-align:center">
-                        {{ \Carbon\Carbon::create()->month($month)->format('F') }} {{ $year }}
-                    </h4>
-
-                    <!-- Table -->
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th style="width:10%">Sr</th>
-                                <th>Agent Name</th>
-                                <th>Entry Date</th>
-                                <th>Payment Mode</th>
-                                <th style="width:20%">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $sr = 1;
-                                $monthlyTotal = 0;
-                            @endphp
-                            {{-- @if ($monthEntries->isEmpty())
+            <div style="margin-bottom: 15px; border: 1px solid #ccc;">
+                <!-- Table -->
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th style="width:10%">Sr</th>
+                            <th>Agent Name</th>
+                            <th>Entry Date</th>
+                            <th>Payment Mode</th>
+                            <th style="width:20%">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                            $sr = 1;
+                            $monthlyTotal = 0;
+                        @endphp
+                        {{-- @if ($monthEntries->isEmpty())
                                 <tr>
                                     <td colspan="3" style="text-align:center;">No Entries</td>
                                 </tr>
                             @endif --}}
-                            @foreach ($monthEntries as $entry)
-                                @php $monthlyTotal += (int)$entry['amount']; @endphp
-
-                                <tr>
-                                    <td>{{ $sr++ }}</td>
-                                    <td>{{ $entry['agent']['name'] }}</td>
-                                    <td>{{ date('d-M-Y', strtotime($entry['entry_date'])) }}</td>
-                                    <td>{{ $entry['amount_type'] }}</td>
-                                    <td>{{ number_format($entry['amount']) }}/-</td>
-                                </tr>
-                            @endforeach
-
-                        </tbody>
-                        <tfoot>
-                            <!-- Monthly Total -->
+                        @foreach ($entries as $entry)
+                            @php $monthlyTotal += (int)$entry['amount']; @endphp
                             <tr>
-                                <td colspan="4" style="text-align: right;"><strong>Total</strong></td>
-                                <td><strong>{{ number_format($monthlyTotal) }}/-</strong></td>
+                                <td>{{ $sr++ }}</td>
+                                <td>{{ $entry['agent']['name'] }}</td>
+                                <td>{{ date('d-M-Y', strtotime($entry['entry_date'])) }}</td>
+                                <td>{{ $entry['amount_type'] }}</td>
+                                <td>{{ number_format($entry['amount']) }}/-</td>
                             </tr>
+                        @endforeach
 
-                        </tfoot>
-                    </table>
-
-                </div>
-            @endforeach
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="text-align: right;"><strong>Total</strong></td>
+                            <td><strong>{{ number_format($monthlyTotal) }}/-</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     </main>
     <footer>
-        <div style="margin-top: 8px !important;">Thank you for using DSA. This is a system-generated report. Contact us :
+        <div style="margin-top: 8px !important;">Thank you for using DSA. This is a system-generated report. Contact us
+            :
             +91-7665629201 </div>
     </footer>
 </body>

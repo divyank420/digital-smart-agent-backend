@@ -10,6 +10,7 @@ use App\Models\SavingRmEntries;
 use App\Exports\MonthlyPostingReportExport;
 use App\Helper\Helper;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Excel;
 
 class PdfReportController extends Controller
@@ -102,7 +103,7 @@ class PdfReportController extends Controller
         $groupedEntries = $entries->groupBy('payment_month');
 
 
-        $pdf = Pdf::loadView('pdf.RmMonthsReport', ['groupedEntries' => $groupedEntries, 'report_period' => $report_period, 'company' => $company, 'year' => $requestData->year]);
+        $pdf = Pdf::loadView('pdf.RmMonthsReport', ['groupedEntries' => $groupedEntries, 'report_period' => $report_period, 'company' => $company, 'year' => $requestData->year, 'rm' => $rm]);
         $filename = $rm->name
             . '_'
             . $monthNames[0] . '-' . end($monthNames)
@@ -111,8 +112,27 @@ class PdfReportController extends Controller
             . '_DPT_RPT_'
             . time()
             . '.pdf';
-            return $pdf->stream($filename);
-            return $pdf->download($filename);
+        return $pdf->stream($filename);
+        return $pdf->download($filename);
         //dd($request->all(), $groupedEntries);
+    }
+
+    public function rmCurrentMonthDepositReport(Request $request)
+    {
+
+        $rm = SavingRm::where('id', $request->key)->first();
+        $company = Helper::getCompanyDetail($rm->company_id);
+        $entries = SavingRmEntries::with('agent')->where('rm_id', $request->key)
+            ->where('payment_month', $request->month)
+            ->where('payment_year', $request->year)
+            ->get();
+        $report_period = date('M', strtotime($request->month)) . '-' . $request->year;
+        $pdf = Pdf::loadView('pdf.RmCurrentMonthReport', ['entries' => $entries, 'report_period' => $report_period, 'company' => $company, 'rm' => $rm]);
+        $filename = $rm->name
+            . '_'
+            . $report_period
+            . time()
+            . '.pdf';
+        return $pdf->stream($filename);
     }
 }
