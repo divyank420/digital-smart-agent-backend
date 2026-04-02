@@ -28,6 +28,156 @@ class ReportsController extends Controller
         $month = $request->month;
         $year = $request->year;
 
+        /* ---------------- COLLECTION ---------------- */
+        $totalCollection = SavingRmEntries::whereMonth('entry_date', $month)
+            ->whereYear('entry_date', $year)
+            ->sum('amount');
+
+        $totalCollectionEntries = SavingRmEntries::whereMonth('entry_date', $month)
+            ->whereYear('entry_date', $year)
+            ->count();
+
+        $totalCustomersEnteries = SavingRmEntries::whereMonth('entry_date', $month)
+            ->whereYear('entry_date', $year)
+            ->distinct('rm_id')
+            ->count('rm_id');
+
+        $totalCustomers = SavingRm::where('company_id', $user->company_id)->count();
+
+        /* ---------------- ACCOUNTS ---------------- */
+        $accounts = CompanyAccount::where('company_id', $user->company_id)
+            ->select('id', 'customer_name', 'bank_name', 'current_balance')
+            ->get();
+
+        /* ---------------- DENOMINATION (CASH + ONLINE) SINGLE QUERY ---------------- */
+        $denominationTotals = SavingDenomination::where('company_id', $user->company_id)
+            ->whereMonth('denomination_date', $month)
+            ->whereYear('denomination_date', $year)
+            ->select(DB::raw("
+            SUM(
+                n_2000 * 2000 +
+                n_500 * 500 +
+                n_200 * 200 +
+                n_100 * 100 +
+                n_50 * 50 +
+                n_20 * 20 +
+                n_10 * 10
+            ) as total_cash,
+            SUM(COALESCE(online, 0)) as total_online
+        "))
+            ->first();
+
+        $cashReceived = $denominationTotals->total_cash ?? 0;
+        $onlineReceived = $denominationTotals->total_online ?? 0;
+
+        /* ---------------- EXPENSES ---------------- */
+        // CASH EXPENSES
+        $cashExpenses = SavingExpenses::whereMonth('created_at', $month)
+            ->whereYear('created_at', $year)
+            ->where('company_id', $user->company_id)
+            ->where('amount_type', 'cash')
+            ->select(
+                DB::raw("SUM(CASE WHEN expenses_type = 'Others' THEN amount ELSE 0 END) as others"),
+                DB::raw("SUM(CASE WHEN expenses_type = 'Lot' THEN amount ELSE 0 END) as rd"),
+                DB::raw("SUM(CASE WHEN expenses_type = 'Default' THEN amount ELSE 0 END) as default_amount"),
+                DB::raw("SUM(CASE WHEN expenses_type = 'Withdrawal' THEN amount ELSE 0 END) as withdrawal"),
+                DB::raw("SUM(amount) as total_cash_expenses")
+            )
+            ->first();
+
+        // ONLINE EXPENSES
+        $onlineExpenses = SavingExpenses::whereMonth('created_at', $month)
+            ->whereYear('created_at', $year)
+            ->where('company_id', $user->company_id)
+            ->where('amount_type', 'online')
+            ->select(
+                DB::raw("SUM(CASE WHEN expenses_type = 'Others' THEN amount ELSE 0 END) as others"),
+                DB::raw("SUM(CASE WHEN expenses_type = 'Lot' THEN amount ELSE 0 END) as rd"),
+                DB::raw("SUM(CASE WHEN expenses_type = 'Default' THEN amount ELSE 0 END) as default_amount"),
+                DB::raw("SUM(CASE WHEN expenses_type = 'Withdrawal' THEN amount ELSE 0 END) as withdrawal"),
+                DB::raw("SUM(amount) as total_online_expenses")
+            )
+            ->first();
+
+        /* ---------------- SAFE VALUES ---------------- */
+        $cashExpenseTotal = $cashExpenses->total_cash_expenses ?? 0;
+        $onlineExpenseTotal = $onlineExpenses->total_online_expenses ?? 0;
+
+        /* ---------------- BALANCES ---------------- */
+        $availableCash = $cashReceived - $cashExpenseTotal;
+        $availableOnline = $onlineReceived - $onlineExpenseTotal;
+
+        /* ---------------- PROFIT / LOSS ---------------- */
+        $totalReceived = $cashReceived + $onlineReceived;
+        $totalExpenses = $cashExpenseTotal + $onlineExpenseTotal;
+
+        $profitLoss = $totalReceived - $totalExpenses;
+        $status = $profitLoss >= 0 ? 'profit' : 'loss';
+
+        /* ---------------- RESPONSE ---------------- */
+        $dashboardData = [
+            'month' => $month,
+            'year' => $year,
+
+            /* ---- OVERALL SUMMARY ---- */
+            'summary' => [
+                'total_received' => $totalReceived,
+                'total_expenses' => $totalExpenses,
+                'profit_loss' => $profitLoss,
+                'status' => $status,
+            ],
+
+            /* ---- CASH ---- */
+            'cash_summary' => [
+                'received' => $cashReceived,
+                'available' => $availableCash,
+                'expenses' => [
+                    'rd' => $cashExpenses->rd ?? 0,
+                    'others' => $cashExpenses->others ?? 0,
+                    'default' => $cashExpenses->default_amount ?? 0,
+                    'withdrawal' => $cashExpenses->withdrawal ?? 0,
+                    'total' => $cashExpenseTotal,
+                ],
+            ],
+
+            /* ---- ONLINE ---- */
+            'online_summary' => [
+                'received' => $onlineReceived,
+                'available' => $availableOnline,
+                'expenses' => [
+                    'rd' => $onlineExpenses->rd ?? 0,
+                    'others' => $onlineExpenses->others ?? 0,
+                    'default' => $onlineExpenses->default_amount ?? 0,
+                    'withdrawal' => $onlineExpenses->withdrawal ?? 0,
+                    'total' => $onlineExpenseTotal,
+                ],
+            ],
+
+            /* ---- COLLECTION ---- */
+            'collection_summary' => [
+                'total_collection' => $totalCollection,
+                'total_entries' => $totalCollectionEntries,
+                'total_customers' => $totalCustomers,
+                'total_customer_entries' => $totalCustomersEnteries,
+            ],
+
+            'accounts' => $accounts,
+        ];
+
+        return sendResponse("Report dashboard data fetched successfully", 1, $dashboardData);
+    }
+    public function reportDashboard_old(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2000',
+        ]);
+
+        $month = $request->month;
+        $year = $request->year;
+
         // 1️⃣ Total Collection Amount for selected month
         $totalCollection = SavingRmEntries::whereMonth('entry_date', $month)
             ->whereYear('entry_date', $year)
@@ -47,8 +197,8 @@ class ReportsController extends Controller
 
         // 5️⃣ Account List
         $totalCustomers = SavingRm::where('company_id', $user->company_id)->count();
-        
-            // 5️⃣ Account List
+
+        // 5️⃣ Account List
         $accounts = CompanyAccount::where('company_id', $user->company_id)
             ->select('id', 'customer_name', 'bank_name', 'current_balance')
             ->get();

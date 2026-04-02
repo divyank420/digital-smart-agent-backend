@@ -33,7 +33,7 @@ Route::middleware('cors')->group(function () {
         return json_encode(['hello' => 'adsfdf']);
     });
     Route::any('get-pending-account-lists', [RmController::class, 'getPendingAccountsList']);
-    
+
     Route::post('login', [ApiController::class, 'login']);
     Route::post('register', [ApiController::class, 'register']);
     Route::middleware('jwt.verify')->group(function () {
@@ -93,7 +93,9 @@ Route::middleware('cors')->group(function () {
     Route::get('monthly-posting-report', [PdfReportController::class, 'monthlyPostingReport']);
     Route::get('customer-installment-report', [PdfReportController::class, 'getCustomerInstallmentReport']);
     Route::get('rm-months-deposits-report', [PdfReportController::class, 'rmMonthsDepositsReport']);
-    Route::get('rm-current-month-deposit-report', [PdfReportController::class, 'rmCurrentMonthDepositReport']);
+    Route::get('rm-current-month-deposit-report', function (Illuminate\Http\Request $request) {
+        return redirect()->route('rm.complete_month_report', $request->all());
+    });
 
     Route::prefix('agent')->group(function () {
         //Route::any('dashboard', [AdminDashboardController::class, 'dashboard']);

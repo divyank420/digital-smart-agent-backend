@@ -245,7 +245,7 @@
                 </td>
                 <td style="width: 50%; text-align: right; vertical-align: middle;">
                     <h3 style="margin: 0; font-weight: 500; font-size: 14px;">DEPOSIT SUMMARY</h3>
-                    <p style="margin: 2px 0 0; font-size: 12px; font-weight: 600;">
+                    <p style="margin: 2px 0 0; font-size: 14px; font-weight: 600;">
                         {{ $report_period }}
                     </p>
                 </td>

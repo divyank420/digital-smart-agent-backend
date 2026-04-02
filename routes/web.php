@@ -5,6 +5,7 @@ use App\Http\Controllers\Agent\AuthController;
 use App\Http\Controllers\Agent\AgentDashboardController;
 use App\Http\Controllers\Agent\EntriesController;
 use App\Http\Controllers\Agent\DenominationController;
+use App\Http\Controllers\api\PdfReportController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +47,8 @@ Route::get('/clear', function () {
     Artisan::call('optimize:clear');
     echo "Cache Cleared";
 });
+
+Route::get('rm-current-month-deposit-report', [PdfReportController::class, 'rmCurrentMonthDepositReport'])->name('rm.complete_month_report');
 
 Route::prefix('agent')->group(function () {
     Route::get('/',  [AuthController::class, 'login']);

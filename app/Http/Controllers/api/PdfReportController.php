@@ -119,14 +119,13 @@ class PdfReportController extends Controller
 
     public function rmCurrentMonthDepositReport(Request $request)
     {
-
         $rm = SavingRm::where('id', $request->key)->first();
         $company = Helper::getCompanyDetail($rm->company_id);
         $entries = SavingRmEntries::with('agent')->where('rm_id', $request->key)
-            ->where('payment_month', $request->month)
-            ->where('payment_year', $request->year)
-            ->get();
-        $report_period = date('M', strtotime($request->month)) . '-' . $request->year;
+        ->where('payment_month', $request->month)
+        ->where('payment_year', $request->year)
+        ->get();
+        $report_period = date('M Y', strtotime($request->year.'-'.$request->month.'-1'));
         $pdf = Pdf::loadView('pdf.RmCurrentMonthReport', ['entries' => $entries, 'report_period' => $report_period, 'company' => $company, 'rm' => $rm]);
         $filename = $rm->name
             . '_'

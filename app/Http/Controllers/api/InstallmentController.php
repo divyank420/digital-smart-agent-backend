@@ -69,16 +69,21 @@ class InstallmentController extends Controller
                 $after = (object) Helper::getRmPaymentSummary($request->rm_id);
 
                 /* ---------------- ✅ FIXED COMPLETION LOGIC ---------------- */
-                $completedMonth = null;
                 $isReportEnable = false;
 
-                if (($after->tracking_month == 'current' && $after->remaining_amount == 0) ||
-                    ($after->tracking_month == 'previous' && $after->remaining_amount == 0)
-                ) {
+                if ($before->month != $after->month || $before->year != $after->year) {
                     $isReportEnable = true;
+                    $reportMonth = $before->month;
+                    $reportYear  = $before->year;
+                    $reportTitle = date('F Y', strtotime("$reportYear-$reportMonth-01"));
                 }
-
-                //dd($before, $after, $isReportEnable);
+                elseif ($before->remaining_amount > 0 && $after->remaining_amount == 0) {
+                    $isReportEnable = true;
+                    $reportMonth = $after->month;
+                    $reportYear  = $after->year;
+                    $reportTitle = date('F Y', strtotime("$reportYear-$reportMonth-01"));
+                }
+                //dd($isReportEnable, $before, $after);
                 /* ---------------- CURRENT STATE ---------------- */
 
                 $remainingAmount = $after->remaining_amount ?? 0;
@@ -86,8 +91,6 @@ class InstallmentController extends Controller
                 $trackingMonth   = $after->tracking_month ?? 'current';
                 $month           = $after->month;
                 $year            = $after->year;
-
-                //dd($before,$after);
 
                 /* ---------------- MESSAGE ---------------- */
 
@@ -120,15 +123,15 @@ class InstallmentController extends Controller
                 if ($isReportEnable) {
                     $reportUrl = url('api/rm-current-month-deposit-report') . '?' . http_build_query([
                         'key' => $request->rm_id,
-                        'year'  => $year,
-                        'month' => $month
+                        'year'  => $reportYear,
+                        'month' => $reportMonth
                     ]);
 
                     $shortUrl = Helper::generateShortUrl($reportUrl);
 
-                    $message .= "\n\n🎉 *" . $monthTitle . " Completed!*\n";
+                    $message .= "\n\n🎉 *" . $reportTitle . " Completed!*\n";
                     $message .= "📄 *Deposit History*: " . $shortUrl . " 🔗 \n\n";
-                    $message .= "⬆️ Click the link above to view your complete *" . $monthTitle . "* deposit history.";
+                    $message .= "⬆️ Click the link above to view your complete *" . $reportTitle . "* deposit history.";
                 }
 
                 /* ---------------- FINAL MESSAGE ---------------- */
@@ -179,7 +182,7 @@ class InstallmentController extends Controller
         try {
             $entry = SavingRmEntries::withTrashed()->where('id', $request->id)->first();
             if (!empty($entry)) {
-                if ($entry->trashed() && !$request->boolean('is_force_delete')) {
+                if ($entry->trashed() && $request->boolean('is_force_delete')) {
                     $entry = $entry->forceDelete();
                 } else {
                     $entry = $entry->delete();

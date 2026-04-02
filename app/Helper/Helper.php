@@ -98,7 +98,7 @@ class Helper
         /* Last Entry Data */
         $entryData = SavingRmEntries::where(['rm_id' => $rmId])->orderBy('id', 'DESC')->first();
 
-        $summary = self::getRmPaymentSummary($rmId);
+        $summary = self::getRmPaymentSummary($rmId,true);
 
         if (!empty($entryData)) {
             $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
@@ -108,7 +108,7 @@ class Helper
         ];
         return array_merge($entrySetup, $summary);
     }
-    public static function getRmPaymentSummary($rmId){
+    public static function getRmPaymentSummary($rmId,$isLastEntry = false){
         $now = now();
         $currentMonth = (int)$now->month;
         $currentYear = (int)$now->year;
@@ -169,7 +169,7 @@ class Helper
 
         $lastMonthValid = !($lastYear < $openYear || ($lastYear == $openYear && $lastMonth < $openMonth));
 
-        if ($lastMonthValid && ($lastDepositAmount <= $previousMonthlyAmount && $currentDepositAmount == 0)) {
+        if ($lastMonthValid && ($lastDepositAmount < $previousMonthlyAmount)) {
 
             $month = $lastMonth;
             $year = $lastYear;
@@ -177,7 +177,7 @@ class Helper
             $deposit = $lastDepositAmount;
             $trackingMonth = 'previous';
 
-        } elseif ($currentDepositAmount <= $currentMonthlyAmount) {
+        } elseif ($currentDepositAmount < $currentMonthlyAmount) {
 
             $month = $currentMonth;
             $year = $currentYear;
