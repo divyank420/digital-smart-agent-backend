@@ -34,124 +34,132 @@ class InstallmentController extends Controller
         try {
             //return DB::transaction(function () use ($request, $requestData) {
 
-                $rmDetail = SavingRm::with('customer')
-                    ->where('id', $request->rm_id)
-                    ->first();
+            $rmDetail = SavingRm::with('customer')
+                ->where('id', $request->rm_id)
+                ->first();
 
-                if (empty($rmDetail)) {
-                    return Helper::sendResponse("Customer Not found", 0);
+            if (empty($rmDetail)) {
+                return Helper::sendResponse("Customer Not found", 0);
+            }
+            $user = Auth::user();
+            /* ---------------- BASIC DATA ---------------- */
+            $requestData['company_id'] = $user->company_id;
+
+            $requestData['entry_date'] = $request->entry_date
+                ? date('Y-m-d', strtotime($request->entry_date))
+                : date('Y-m-d');
+
+            $requestData['payment_month'] = $request->payment_month;
+
+            if ($request->amount_type === 'online' && $request->account) {
+                CompanyAccount::where('id', $request->account)
+                    ->where('company_id', $user->company_id)
+                    ->firstOrFail();
+
+                $requestData['account_id'] = (int)$request->account;
+            }
+
+            /* ---------------- BEFORE SUMMARY ---------------- */
+            $before = (object) Helper::getRmPaymentSummary($request->rm_id);
+
+            /* ---------------- SAVE ENTRY ---------------- */
+            SavingRmEntries::create($requestData);
+            
+            if (isset($request->is_whatsapp_message)) {
+
+                $sentWhatsappMessage = filter_var($request->is_whatsapp_message, FILTER_VALIDATE_BOOLEAN);
+
+                if (!$sentWhatsappMessage) {
+                    return Helper::sendResponse("Entry recorded. WhatsApp message skipped.", 1);
                 }
-                $user = Auth::user();
-                /* ---------------- BASIC DATA ---------------- */
-                $requestData['company_id'] = $user->company_id;
+            }
 
-                $requestData['entry_date'] = $request->entry_date
-                    ? date('Y-m-d', strtotime($request->entry_date))
-                    : date('Y-m-d');
+            /* ---------------- AFTER SUMMARY ---------------- */
+            $after = (object) Helper::getRmPaymentSummary($request->rm_id);
 
-                $requestData['payment_month'] = $request->payment_month;
+            /* ---------------- ✅ FIXED COMPLETION LOGIC ---------------- */
+            $isReportEnable = false;
 
-                if ($request->amount_type === 'online' && $request->account) {
-                    CompanyAccount::where('id', $request->account)
-                        ->where('company_id', $user->company_id)
-                        ->firstOrFail();
+            if ($before->month != $after->month || $before->year != $after->year) {
+                $isReportEnable = true;
+                $reportMonth = $before->month;
+                $reportYear  = $before->year;
+                $reportTitle = date('F Y', strtotime("$reportYear-$reportMonth-01"));
+            } elseif ($before->remaining_amount > 0 && $after->remaining_amount == 0) {
+                $isReportEnable = true;
+                $reportMonth = $after->month;
+                $reportYear  = $after->year;
+                $reportTitle = date('F Y', strtotime("$reportYear-$reportMonth-01"));
+            }
+            //dd($isReportEnable, $before, $after);
+            /* ---------------- CURRENT STATE ---------------- */
 
-                    $requestData['account_id'] = (int)$request->account;
-                }
+            $remainingAmount = $after->remaining_amount ?? 0;
+            $monthlyAmount   = $after->monthly_amount ?? 0;
+            $trackingMonth   = $after->tracking_month ?? 'current';
+            $month           = $after->month;
+            $year            = $after->year;
 
-                /* ---------------- BEFORE SUMMARY ---------------- */
-                $before = (object) Helper::getRmPaymentSummary($request->rm_id);
+            /* ---------------- MESSAGE ---------------- */
 
-                /* ---------------- SAVE ENTRY ---------------- */
-                SavingRmEntries::create($requestData);
+            $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n";
+            $message .= "*===============================* \n";
+            $message .= "*Transaction* \n";
+            $message .= "*Date*: " . date('d l, Y', strtotime($requestData['entry_date'])) . " 📅\n";
+            $message .= "*Amount*: " . amountFormat($request->amount) . " 💰\n";
+            $message .= "*===============================* \n";
+            $monthTitle = date('F Y', strtotime("$year-$month-01"));
 
-                /* ---------------- AFTER SUMMARY ---------------- */
-                $after = (object) Helper::getRmPaymentSummary($request->rm_id);
+            if ($trackingMonth === 'previous') {
 
-                /* ---------------- ✅ FIXED COMPLETION LOGIC ---------------- */
-                $isReportEnable = false;
-
-                if ($before->month != $after->month || $before->year != $after->year) {
-                    $isReportEnable = true;
-                    $reportMonth = $before->month;
-                    $reportYear  = $before->year;
-                    $reportTitle = date('F Y', strtotime("$reportYear-$reportMonth-01"));
-                }
-                elseif ($before->remaining_amount > 0 && $after->remaining_amount == 0) {
-                    $isReportEnable = true;
-                    $reportMonth = $after->month;
-                    $reportYear  = $after->year;
-                    $reportTitle = date('F Y', strtotime("$reportYear-$reportMonth-01"));
-                }
-                //dd($isReportEnable, $before, $after);
-                /* ---------------- CURRENT STATE ---------------- */
-
-                $remainingAmount = $after->remaining_amount ?? 0;
-                $monthlyAmount   = $after->monthly_amount ?? 0;
-                $trackingMonth   = $after->tracking_month ?? 'current';
-                $month           = $after->month;
-                $year            = $after->year;
-
-                /* ---------------- MESSAGE ---------------- */
-
-                $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n";
-                $message .= "*===============================* \n";
-                $message .= "*Transaction* \n";
-                $message .= "*Date*: " . date('d l, Y', strtotime($requestData['entry_date'])) . " 📅\n";
-                $message .= "*Amount*: " . amountFormat($request->amount) . " 💰\n";
-                $message .= "*===============================* \n";
-                $monthTitle = date('F Y', strtotime("$year-$month-01"));
-
-                if ($trackingMonth === 'previous') {
-
+                $message .= "*Running Month*: " . $monthTitle . "\n";
+                $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰\n";
+                $message .= "*" . $monthTitle . " Status*: Pending ❌";
+            } elseif ($trackingMonth === 'current') {
+                if ($remainingAmount > 0) {
                     $message .= "*Running Month*: " . $monthTitle . "\n";
-                    $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰\n";
-                    $message .= "*" . $monthTitle . " Status*: Pending ❌";
-                } elseif ($trackingMonth === 'current') {
-                    if ($remainingAmount > 0) {
-                        $message .= "*Running Month*: " . $monthTitle . "\n";
-                        $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰";
-                    } else {
-                        $message .= "*" . $monthTitle . " Status*: Completed ✅";
-                    }
+                    $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰";
                 } else {
-                    $message .= "*Advance Payment For*: " . $monthTitle . "\n";
-                    $message .= "*Next Installment*: " . amountFormat($monthlyAmount) . " 💰";
+                    $message .= "*" . $monthTitle . " Status*: Completed ✅";
                 }
-                /* ---------------- ✅ REPORT LINK (FIXED) ---------------- */
+            } else {
+                $message .= "*Advance Payment For*: " . $monthTitle . "\n";
+                $message .= "*Next Installment*: " . amountFormat($monthlyAmount) . " 💰";
+            }
+            /* ---------------- ✅ REPORT LINK (FIXED) ---------------- */
 
-                if ($isReportEnable) {
-                    $reportUrl = url('api/rm-current-month-deposit-report') . '?' . http_build_query([
-                        'key' => $request->rm_id,
-                        'year'  => $reportYear,
-                        'month' => $reportMonth
-                    ]);
-
-                    $shortUrl = Helper::generateShortUrl($reportUrl);
-
-                    $message .= "\n\n🎉 *" . $reportTitle . " Completed!*\n";
-                    $message .= "📄 *Deposit History*: " . $shortUrl . " 🔗 \n\n";
-                    $message .= "⬆️ Click the link above to view your complete *" . $reportTitle . "* deposit history.";
-                }
-
-                /* ---------------- FINAL MESSAGE ---------------- */
-
-                $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
-
-                /* ---------------- WHATSAPP ---------------- */
-
-                $encodedMessage = urlencode($message);
-
-                $mobileNo = $rmDetail->customer->mobile;
-                $mobileNo = $user->role == 'Developer' ? '7665629201' : $mobileNo;
-
-                $redirect_url = $mobileNo
-                    ? "https://wa.me/91{$mobileNo}?text=" . $encodedMessage
-                    : "https://wa.me/?text=" . $encodedMessage;
-
-                return Helper::sendResponse("Entry Successfully entered", 1, [
-                    'redirect_url' => $redirect_url
+            if ($isReportEnable) {
+                $reportUrl = url('api/rm-current-month-deposit-report') . '?' . http_build_query([
+                    'key' => $request->rm_id,
+                    'year'  => $reportYear,
+                    'month' => $reportMonth
                 ]);
+
+                $shortUrl = Helper::generateShortUrl($reportUrl);
+
+                $message .= "\n\n🎉 *" . $reportTitle . " Completed!*\n";
+                $message .= "📄 *Deposit History*: " . $shortUrl . " 🔗 \n\n";
+                $message .= "⬆️ Click the link above to view your complete *" . $reportTitle . "* deposit history.";
+            }
+
+            /* ---------------- FINAL MESSAGE ---------------- */
+
+            $message = Helper::transactionWithPromotionalMessage($rmDetail->name, $message);
+
+            /* ---------------- WHATSAPP ---------------- */
+
+            $encodedMessage = urlencode($message);
+
+            $mobileNo = $rmDetail->customer->mobile;
+            $mobileNo = $user->role == 'Developer' ? '7665629201' : $mobileNo;
+
+            $redirect_url = $mobileNo
+                ? "https://wa.me/91{$mobileNo}?text=" . $encodedMessage
+                : "https://wa.me/?text=" . $encodedMessage;
+
+            return Helper::sendResponse("Entry Successfully entered", 1, [
+                'redirect_url' => $redirect_url
+            ]);
             //});
         } catch (\Throwable $th) {
             return Helper::sendResponse($th->getMessage(), 0);

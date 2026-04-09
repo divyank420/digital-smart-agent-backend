@@ -8,11 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[ObservedBy([SavingExpensesObserver::class])]
-
 class SavingExpenses extends Model
 {
     use HasFactory;
-    protected $fillable = ['company_id','user_id','account_id','amount','amount_type','expenses_type','reason'];
+    protected $fillable = ['company_id','user_id','account_id','amount','amount_type','expenses_type','expenses_date','reason'];
 
     public function Agent(){
         return $this->belongsTo(User::class, 'user_id','id')->select(['id','username']);
@@ -41,7 +40,7 @@ class SavingExpenses extends Model
             'expenses_type'=>$this->expenses_type,
             'reason'=>$this->reason,
             'amount'=>$this->amount,
-            'expenses_date'=>date('d-M-Y',strtotime($this->created_at)),
+            'expenses_date'=>date('d-M-Y',strtotime($this->expenses_date)),
             'expenses_time'=>date('h:i A',strtotime($this->created_at)),
         ];
         return $data;

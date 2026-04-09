@@ -6,6 +6,7 @@ use App\Models\SavingExpenses;
 use App\Models\SavingAccountTransaction;
 use App\Models\CompanyAccount;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SavingExpensesObserver
 {
@@ -14,14 +15,12 @@ class SavingExpensesObserver
      */
     public function created(SavingExpenses $expense): void
     {
-        if ($expense->amount_type !== 'online') {
+        if ($expense->amount_type !== 'online' || !$expense->account_id) {
             return;
         }
-
         DB::transaction(function () use ($expense) {
 
-            $account = CompanyAccount::lockForUpdate()
-                ->findOrFail($expense->account_id);
+            $account = CompanyAccount::lockForUpdate()->findOrFail($expense->account_id);
 
             $newBalance = $account->current_balance - $expense->amount;
 
@@ -42,17 +41,12 @@ class SavingExpensesObserver
      */
     public function updated(SavingExpenses $expense): void
     {
+
         DB::transaction(function () use ($expense) {
 
             $old = $expense->getOriginal();
-            $oldType      = $old['amount_type'];
+            $oldType = $old['amount_type'] ?? 'cash';
             $newType      = $expense->amount_type;
-
-            $oldAmount    = $old['amount'];
-            $newAmount    = $expense->amount;
-
-            $oldAccountId = $old['account_id'];
-            $newAccountId = $expense->account_id;
 
             $transaction = SavingAccountTransaction::where([
                 'transactionable_id'   => $expense->id,
@@ -72,20 +66,26 @@ class SavingExpensesObserver
             }
 
             // ONLINE → ONLINE
-            if ($newType !== 'online' || !$transaction) {
-                return;
-            }
+            if ($newType === 'online') {
+                if (!$transaction) {
+                    //$this->created($expense); // Backup if transaction was missing
+                    return;
+                }
+                $oldAmount    = $old['amount'];
+                $newAmount    = $expense->amount;
 
-            // ACCOUNT CHANGED
-            if ($oldAccountId != $newAccountId) {
-                $this->moveTransaction($transaction, $expense, $newAccountId, $newAmount);
-                return;
-            }
+                $oldAccountId = $old['account_id'];
+                $newAccountId = $expense->account_id;
 
-            // SAME ACCOUNT → AMOUNT CHANGED
-            $difference = $newAmount - $oldAmount;
-            if ($difference !== 0) {
-                $this->adjustTransaction($transaction, $newAmount, $difference);
+                if ($oldAccountId != $newAccountId) {
+                    $this->moveTransaction($transaction, $expense, $newAccountId, $newAmount);
+                    return;
+                } else {
+                    $difference = $newAmount - $oldAmount;
+                    if ($difference !== 0) {
+                        $this->adjustTransaction($transaction, $newAmount, $difference);
+                    }
+                }
             }
         });
     }
@@ -95,6 +95,7 @@ class SavingExpensesObserver
      */
     public function deleted(SavingExpenses $expense): void
     {
+
         if ($expense->amount_type !== 'online') {
             return;
         }
@@ -120,11 +121,16 @@ class SavingExpensesObserver
         $account = CompanyAccount::lockForUpdate()
             ->findOrFail($transaction->account_id);
 
-        $account->increment('current_balance', $transaction->amount); // rollback debit
+        if ($account) {
+            $account->increment('current_balance', $transaction->amount);
+        }
 
         $transaction->delete();
 
-        $expense->forceFill(['account_id' => null])->saveQuietly();
+        if ($expense->exists) {
+            $expense->account_id = null;
+            $expense->saveQuietly();
+        }
     }
 
     protected function moveTransaction(

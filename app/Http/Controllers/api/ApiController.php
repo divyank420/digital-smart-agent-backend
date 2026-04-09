@@ -74,7 +74,7 @@ class ApiController extends Controller
                 $user->accounts = $accounts;
             }
             if ($guard == 'customer') {
-                $user->rm_list = SavingRm::select('id','name','account_type','rm_code','monthly_amount','installment_amount','previous_balance')->where('customer_id',$user->id)->get();
+                $user->rm_list = SavingRm::select('id', 'name', 'account_type', 'rm_code', 'monthly_amount', 'installment_amount', 'previous_balance')->where('customer_id', $user->id)->get();
             }
 
             //$user = Auth::user();
@@ -264,15 +264,70 @@ class ApiController extends Controller
                 'amount_type' => 'required',
                 'expenses_type' => 'required',
                 'reason' => 'required',
+                'expenses_date' => 'required',
             ]);
             if ($validator->fails()) {
                 $error = Helper::ValidationSet($validator->errors(), 422);
             }
             $requestData['company_id'] = Auth::user()->company_id;
-            SavingExpenses::create($requestData);
+            $requestData['expenses_date'] = date('Y-m-d', strtotime($request->expenses_date));
+            $expenses = SavingExpenses::create($requestData);
             sendResponse("Expences Successfully Added", 1);
         } catch (\Throwable $th) {
             sendResponse($th->getMessage(), 500);
+        }
+    }
+    public function updateExpences(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'id' => 'required|exists:saving_expenses,id',
+                'user_id' => 'required',
+                'amount' => 'required|numeric',
+                'amount_type' => 'required',
+                'expenses_type' => 'required',
+                'reason' => 'required',
+                'expenses_date' => 'required',
+            ]);
+            if ($validator->fails()) {
+                $error = Helper::ValidationSet($validator->errors(), 422);
+            }
+            $requestData = $request->all();
+            $requestData['company_id'] = Auth::user()->company_id;
+            $requestData['expenses_date'] = date('Y-m-d', strtotime($request->expenses_date));
+
+            $expense = SavingExpenses::findOrFail($request->id);
+            $expense->fill($requestData);
+            $expense->save();
+            return sendResponse("Expenses Successfully Updated", 1);
+        } catch (\Throwable $th) {
+            sendResponse($th->getMessage(), 500);
+        }
+    }
+
+    public function deleteExpences(Request $request)
+    {
+        try {
+
+            $validator = Validator::make($request->all(), [
+                'id' => 'required|exists:saving_expenses,id',
+            ]);
+
+            if ($validator->fails()) {
+                return Helper::ValidationSet($validator->errors(), 422);
+            }
+            $expense = SavingExpenses::where('id', $request->id)
+                ->where('company_id', Auth::user()->company_id)
+                ->first();
+
+            if (!$expense) {
+                return sendResponse("Record not found or unauthorized", 0);
+            }
+            $expense->delete();
+
+            return sendResponse("Expense Successfully Deleted", 1);
+        } catch (\Throwable $th) {
+            return sendResponse($th->getMessage(), 500);
         }
     }
 
@@ -283,8 +338,8 @@ class ApiController extends Controller
 
             $user = Auth::user();
             $expenses = SavingExpenses::where('company_id', $user->company_id)
-                ->whereMonth('created_at', $request->month)
-                ->whereYear('created_at', $request->year);
+                ->whereMonth('expenses_date', $request->month)
+                ->whereYear('expenses_date', $request->year);
             if ($request->amount_type != '') {
                 $expenses = $expenses->where('amount_type', $request->amount_type);
             }
@@ -292,7 +347,8 @@ class ApiController extends Controller
                 $expenses = $expenses->where('expenses_type', $request->expenses_type);
             }
 
-            $expenses = $expenses->orderBy('created_at', $request->sort ?? 'desc');
+            $expenses = $expenses->orderBy('expenses_date', $request->sort ?? 'desc');
+            $expenses = $expenses->orderBy('id', $request->sort ?? 'desc');
             $expenses = $expenses->get()->map->formatData();
             if (!empty($expenses)) {
                 sendResponse("Expences List", 1, $expenses);

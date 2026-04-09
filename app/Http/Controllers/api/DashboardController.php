@@ -24,11 +24,14 @@ class DashboardController extends Controller
             $dashboardData['yesterday_collection'] = SavingRmEntries::whereDate('created_at', date('Y-m-d', strtotime("-1 days")))->where('company_id', $user->company_id)->sum('amount');
             $dashboardData['today_entry_count'] = SavingRmEntries::whereDate('created_at', date('Y-m-d'))->where('company_id', $user->company_id)->count();
             $dashboardData['current_month']['income'] = SavingRmEntries::whereMonth('entry_date', date('m'))->whereYear('entry_date', date('Y'))->where('company_id', $user->company_id)->sum('amount');
+
             $dashboardData['current_month']['expenses'] = SavingExpenses::whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'))->where('company_id', $user->company_id)->sum('amount');
+
             $dashboardData['total_rd_lot'] = SavingExpenses::whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'))->where('company_id', $user->company_id)->where('expenses_type', 'Lot')->sum('amount');
+
             $dashboardData['total_denomination'] = SavingDenomination::whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'))->where('company_id', $user->company_id)->sum('total');
 
-            $dashboardData['expected_collection'] = SavingRm::where('company_id', $user->company_id)
+            $dashboardData['expected_collection'] = SavingRm::select('monthly_amount')->where('company_id', $user->company_id)
                 ->where('status', 1)
                 ->sum('monthly_amount');
 
@@ -80,17 +83,6 @@ class DashboardController extends Controller
                 $expense = SavingExpenses::whereDate('created_at', $date)->where('expenses_type', 'Others')->where('company_id', $user->company_id)->sum('amount');
 
                 $denomination = SavingDenomination::whereDate('denomination_date', $date)->where('company_id', $user->company_id)->sum('total');
-
-                $total_deno_exp_amount = $denomination + $expense;
-                $dashboardData['last_records_history'][] = [
-                    'date'        => date('d-M', strtotime($date)),
-                    'online'      => $collection->online ?? 0,
-                    'cash'        => $collection->cash ?? 0,
-                    'collection'  => $collection->total ?? 0,
-                    'expenses'    => $expense ?? 0,
-                    'denomination' => $denomination ?? 0,
-                    'total_deno'  => $total_deno_exp_amount
-                ];
             }
 
             Helper::sendResponse("Dashboard Data", 1, $dashboardData);

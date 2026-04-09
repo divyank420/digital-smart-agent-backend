@@ -71,6 +71,8 @@ Route::middleware('cors')->group(function () {
 
         Route::Post('add-expences', [ApiController::class, 'addExpences']);
         Route::Post('expenses-list', [ApiController::class, 'expencesList']);
+        Route::Post('update-expences', [ApiController::class, 'updateExpences']);
+        Route::Post('delete-expences', [ApiController::class, 'deleteExpences']);
 
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
 
