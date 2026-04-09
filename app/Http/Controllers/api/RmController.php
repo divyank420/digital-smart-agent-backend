@@ -20,68 +20,59 @@ class RmController extends Controller
 {
     public function newRm(Request $request)
     {
-        $requestData = $request->all();
         $validator = Validator::make($request->all(), [
-            'name' => 'required',
-            'mobile' => 'required',
-            'account_type' => 'required',
-            'monthly_amount' => 'required|integer',
+            'name'               => 'required',
+            'mobile'             => 'required',
+            'account_type'       => 'required',
+            'monthly_amount'     => 'required|integer',
             'installment_amount' => 'required|integer',
-            'rm_code' => 'required',
+            'rm_code'            => 'required',
         ]);
+
         if ($validator->fails()) {
-            $error = Helper::ValidationSet($validator->errors());
+            return Helper::sendResponse(Helper::ValidationSet($validator->errors()), 422);
         }
+
         DB::beginTransaction();
         try {
-            $customer = SavingCustomer::where('mobile', $request->mobile)->first();
-            if (empty($customer)) {
-                $customer = new SavingCustomer();
-                $customer->name = $request->name;
-                $customer->mobile = $request->mobile;
-                $customer->email = $request->email;
-                $customer->password = Hash::make('user@123');
-                $customer->save();
+            $customer = SavingCustomer::firstOrCreate(
+                ['mobile' => $request->mobile],
+                [
+                    'name'     => $request->name,
+                    'email'    => $request->email,
+                    'password' => Hash::make('user@123'),
+                ]
+            );
 
-                $name = str_replace(' ', '', strtolower($request->name));
-                $customer->qr_code = $name = $name . rand(00000, 99999) . '@:@' . $customer->id . '.png';
-
-                /* QrCode::size(500)
-                ->format('png')
-                ->generate($name, public_path('rm/qrcodes/'.$name)); */
+            // Update Customer RM Code if it's new
+            if ($customer->wasRecentlyCreated) {
                 $customer->rm_code = 'RM' . str_pad($customer->id, 6, "0", STR_PAD_LEFT);
                 $customer->save();
             }
+
             $user = Auth::user();
-            $requestData['name'] = ucwords($requestData['name']);
-            $requestData['company_id'] = $user->company_id;
-            $requestData['agent_id'] = $user->id;
-            $requestData['customer_id'] = $customer->id;
-            $rmData = SavingRm::create($requestData);
 
-            $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
-            $rmData->save();
-
-            RmMonthlyAmountHistory::create([
-                'rm_id' => $rmData->id,
-                'effective_month' => $request->opening_month ?? date('m'),
-                'effective_year' => $request->opening_year ?? date('Y'),
-                'monthly_amount' => $request->monthly_amount,
-                'installment_amount' => $request->installment_amount
+            $rmData = SavingRm::create([
+                'name'               => ucwords($request->name),
+                'company_id'         => $user->company_id,
+                'agent_id'           => $user->id,
+                'customer_id'        => $customer->id,
+                'account_type'       => $request->account_type,
+                'monthly_amount'     => $request->monthly_amount,
+                'installment_amount' => $request->installment_amount,
+                'rm_code'            => $request->rm_code, // Initial code
             ]);
 
+            $rmData->update([
+                'rm_code' => 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT)
+            ]);
 
             DB::commit();
-            Helper::sendResponse("Rm Successfully Added", 200);
+            return Helper::sendResponse("Rm Successfully Added", 200);
         } catch (\Throwable $th) {
             DB::rollback();
-            Helper::sendResponse($th->getMessage());
+            return Helper::sendResponse($th->getMessage(), 500);
         }
-    }
-
-    public function addSubRmAccount(Request $request)
-    {
-        pr($request->all());
     }
 
     public function rmDetail(Request $request)
@@ -287,7 +278,7 @@ class RmController extends Controller
         try {
             $month = $request->month ?? date('m');
             $year = $request->year ?? date('Y');
-            $rmEntries = SavingRmEntries::with(['RmDetail','Agent'])->where(['rm_id' => $request->rm_id]);
+            $rmEntries = SavingRmEntries::with(['RmDetail', 'Agent'])->where(['rm_id' => $request->rm_id]);
             $rmEntries = $rmEntries->where(['payment_month' => intval($month), 'payment_year' => intval($year)]);
             $totalAmount = $rmEntries->sum('amount');
             $rmEntries = $rmEntries->orderBy('entry_date', 'DESC')->get()->map->formatData()->toArray();

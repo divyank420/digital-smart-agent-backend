@@ -44,7 +44,6 @@ Route::middleware('cors')->group(function () {
 
         Route::get('get-rm-list', [RmController::class, 'getRmList']);
         Route::post('add-new-rm', [RmController::class, 'newRm']);
-        Route::post('add-sub-rm-account', [RmController::class, 'AddSubRmAccount']);
         Route::any('rm-detail', [RmController::class, 'rmDetail']);
         Route::post('edit-rm', [RmController::class, 'editRm']);
         Route::post('delete-rm', [RmController::class, 'deleteRm']);

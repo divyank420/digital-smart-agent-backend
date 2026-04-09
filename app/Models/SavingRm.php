@@ -27,6 +27,7 @@ class SavingRm extends Model
     ];
     protected $casts = [
         'installment_amount' => 'integer',
+        'monthly_amount' => 'integer'
     ];
     protected $appends = ['total_deposit_amount', 'current_month_deposit_amount'];
     protected $with = ['monthlyAmountHistory', 'installmentAmountHistory'];
@@ -134,7 +135,26 @@ class SavingRm extends Model
                 return $row->effective_year * 100 + $row->effective_month;
             })
             ->first();
+        if ($history && isset($history->$field)) {
+            return (int)$history->$field;
+        }
 
-        return (int)$history->$field ?? $defaultValue;
+        $rawMonthly = $this->getRawOriginal('monthly_amount');
+        $rawInstallment = $this->getRawOriginal('installment_amount');
+
+        if ($rawMonthly > 0) {
+            RmMonthlyAmountHistory::create([
+                'rm_id'              => $this->id,
+                'effective_month'    => $this->opening_month ?? date('m'),
+                'effective_year'     => $this->opening_year ?? date('Y'),
+                'monthly_amount'     => $rawMonthly,
+                'installment_amount' => $rawInstallment,
+                'status'             => 1
+            ]);
+
+            $this->unsetRelation('monthlyAmountHistory');
+        }
+
+        return (int)$this->getRawOriginal($field) ?: (int)$defaultValue;
     }
 }
