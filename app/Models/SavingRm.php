@@ -7,8 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\SavingCustomer;
 use App\Models\SavingRmEntries;
+use App\Observers\SavingRmObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Support\Facades\Auth;
 
+#[ObservedBy([SavingRmObserver::class])]
 class SavingRm extends Model
 {
     use SoftDeletes, HasFactory;
