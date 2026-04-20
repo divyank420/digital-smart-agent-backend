@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\SavingCustomer;
 use App\Models\SavingRmEntries;
+use App\Models\RmMonthlyAmountHistory;
 use App\Observers\SavingRmObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Support\Facades\Auth;

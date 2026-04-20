@@ -112,9 +112,9 @@ class InstallmentController extends Controller
 
             if ($trackingMonth === 'previous') {
 
-                $message .= "*Running Month*: " . $monthTitle . "\n";
-                $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰\n";
-                $message .= "*" . $monthTitle . " Status*: Pending ❌";
+                // $message .= "*Running Month*: " . $monthTitle . "\n";
+                // $message .= "*Remaining Balance*: " . amountFormat($remainingAmount) . " 💰\n";
+                // $message .= "*" . $monthTitle . " Status*: Pending ❌";
             } elseif ($trackingMonth === 'current') {
                 if ($remainingAmount > 0) {
                     $message .= "*Running Month*: " . $monthTitle . "\n";

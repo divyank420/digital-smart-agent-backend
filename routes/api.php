@@ -39,6 +39,7 @@ Route::middleware('cors')->group(function () {
     Route::middleware('jwt.verify')->group(function () {
         Route::any('dashboard', [DashboardController::class, 'dashboard']);
         Route::post('dashboard-summary', [DashboardController::class, 'getDashboardSummary']);
+        Route::get('customer-detail', [ApiController::class, 'customerDetail']);
 
         /* Rm */
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
 use App\Models\SavingDenomination;
 use App\Models\SavingCompany;
+use App\Models\SavingCustomer;
 use App\Models\SavingExpenses;
 use App\Models\SavingRm;
 use App\Models\User;
@@ -68,7 +69,15 @@ class ApiController extends Controller
 
             $user = Auth::guard($guard)->user();
             if ($guard != 'customer') {
-                $agent_lists = User::where('company_id', $user->company_id)->where('id', '!=', $user->id)->where('id', '!=', 1)->pluck('name', 'id')->toArray();
+                $agent_data = User::where('company_id', $user->company_id)
+                    ->whereNotIn('id', [1])
+                    ->select('name as label', 'id as value')
+                    ->get();
+
+                $agent_lists = $agent_data->prepend([
+                    'label' => 'All Agents',
+                    'value' => ''
+                ])->toArray();
                 $accounts = CompanyAccount::where('company_id', $user->company_id)->where('is_active', true)->get();
                 $user->agent_list = $agent_lists;
                 $user->accounts = $accounts;
@@ -82,6 +91,29 @@ class ApiController extends Controller
             return sendResponse('Login Successful.', 200, ['token' => $token, 'userData' => $user]);
         } catch (\Throwable $th) {
             sendResponse($th->getMessage());
+        }
+    }
+
+    public function customerDetail(Request $request)
+    {
+        $query = SavingCustomer::query()->select('name','id','email','mobile','status','is_password_updated');
+
+        if ($request->filled('mobile')) {
+            $query->where('mobile', $request->mobile);
+        }
+
+        if ($request->filled('email')) {
+            $query->where('email', $request->email);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        $customerDetail = $query->first();
+        if ($customerDetail) {
+            return Helper::sendResponse('Customer Detail', 1, $customerDetail);
+        } else {
+            return Helper::sendResponse('Customer Not Found', 0 , null);
         }
     }
 
