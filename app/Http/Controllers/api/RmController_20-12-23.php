@@ -91,7 +91,7 @@ class RmController extends Controller
             'account_type' => 'required',
             'monthly_amount' => 'required|integer',
             'installment_amount' => 'required|integer',
-            'previous_balance' => 'required|integer',
+            'opening_balance' => 'required|integer',
         ]);
         if ($validator->fails()) {
             $error = Helper::ValidationSet($validator->errors());
@@ -119,7 +119,7 @@ class RmController extends Controller
         $rmData->account_type = $request->account_type;
         $rmData->monthly_amount = $request->monthly_amount;
         $rmData->installment_amount = $request->installment_amount;
-        $rmData->previous_balance = $request->previous_balance;
+        $rmData->opening_balance = $request->opening_balance;
         
         
         if($rmData->save()){

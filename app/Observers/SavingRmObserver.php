@@ -16,8 +16,8 @@ class SavingRmObserver
             'rm_id'              => $savingRm->id,
             'effective_month'    => $savingRm->opening_month ?? date('m'),
             'effective_year'     => $savingRm->opening_year ?? date('Y'),
-            'monthly_amount'     => $savingRm->getRawOriginal('monthly_amount'),
-            'installment_amount' => $savingRm->getRawOriginal('installment_amount'),
+            'monthly_amount'     => $savingRm->monthly_amount,
+            'installment_amount' => $savingRm->installment_amount,
             'status'             => 1
         ]);
     }

@@ -24,9 +24,9 @@ class SavingRm extends Model
         'monthly_amount',
         'installment_amount',
         'account_type',
-        'previous_balance',
         'opening_month',
         'opening_year',
+        'opening_balance',
         'maturity_status',
     ];
     protected $casts = [
@@ -57,7 +57,6 @@ class SavingRm extends Model
         if (!empty($user)) {
             $totalAmount = SavingRmEntries::where('rm_id', $this->id)->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'))
                 ->where('company_id', $user->company_id)->sum('amount');
-            //dd($totalAmount);
         }
         return number_format($totalAmount);
     }
@@ -84,7 +83,7 @@ class SavingRm extends Model
             'account_type' => $this->account_type,
             'monthly_amount' => $this->monthly_amount,
             'installment_amount' => $this->installment_amount,
-            'previous_balance' => $this->previous_balance,
+            'opening_balance' => $this->opening_balance,
             'total_deposit' => $this->current_month_deposit_amount,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

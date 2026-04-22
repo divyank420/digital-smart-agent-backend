@@ -22,11 +22,10 @@ class RmController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name'               => 'required',
-            'mobile'             => 'required',
+            'mobile'             => 'required|digits:10',
             'account_type'       => 'required',
             'monthly_amount'     => 'required|integer',
             'installment_amount' => 'required|integer',
-            'rm_code'            => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -34,6 +33,7 @@ class RmController extends Controller
         }
 
         DB::beginTransaction();
+
         try {
             $customer = SavingCustomer::firstOrCreate(
                 ['mobile' => $request->mobile],
@@ -44,7 +44,6 @@ class RmController extends Controller
                 ]
             );
 
-            // Update Customer RM Code if it's new
             if ($customer->wasRecentlyCreated) {
                 $customer->rm_code = 'RM' . str_pad($customer->id, 6, "0", STR_PAD_LEFT);
                 $customer->save();
@@ -60,15 +59,17 @@ class RmController extends Controller
                 'account_type'       => $request->account_type,
                 'monthly_amount'     => $request->monthly_amount,
                 'installment_amount' => $request->installment_amount,
-                'rm_code'            => $request->rm_code, // Initial code
+                'opening_month'      => $request->opening_month ?? date('m'),
+                'opening_year'       => $request->opening_year ?? date('Y'),
+                'opening_balance'    => $request->opening_balance ?? 0,
             ]);
 
-            $rmData->update([
-                'rm_code' => 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT)
-            ]);
+            $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
+            $rmData->save();
 
             DB::commit();
-            return Helper::sendResponse("Rm Successfully Added", 200);
+
+            return Helper::sendResponse("RM Successfully Added", 200);
         } catch (\Throwable $th) {
             DB::rollback();
             return Helper::sendResponse($th->getMessage(), 500);
@@ -97,9 +98,7 @@ class RmController extends Controller
             'name' => 'required',
             'mobile' => 'required',
             'account_type' => 'required',
-            'monthly_amount' => 'required|integer',
-            'installment_amount' => 'required|integer',
-            'previous_balance' => 'required|integer',
+            'opening_balance' => 'required|integer',
         ]);
         if ($validator->fails()) {
             $error = Helper::ValidationSet($validator->errors());
@@ -125,9 +124,9 @@ class RmController extends Controller
 
         $rmData->name = $request->name;
         $rmData->account_type = $request->account_type;
-        $rmData->monthly_amount = $request->monthly_amount;
-        $rmData->installment_amount = $request->installment_amount;
-        $rmData->previous_balance = $request->previous_balance;
+        $rmData->opening_balance = $request->opening_balance;
+        $rmData->opening_month = $request->opening_month;
+        $rmData->opening_year = $request->opening_year;
 
 
         if ($rmData->save()) {

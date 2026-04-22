@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('saving_rms', function (Blueprint $table) {
-            $table->integer('opening_month')->nullable()->after('previous_balance');
+            $table->integer('opening_month')->nullable()->after('opening_balance');
             $table->integer('opening_year')->nullable()->after('opening_month');
 
         });

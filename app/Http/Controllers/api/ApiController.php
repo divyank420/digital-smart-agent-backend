@@ -83,7 +83,7 @@ class ApiController extends Controller
                 $user->accounts = $accounts;
             }
             if ($guard == 'customer') {
-                $user->rm_list = SavingRm::select('id', 'name', 'account_type', 'rm_code', 'monthly_amount', 'installment_amount', 'previous_balance')->where('customer_id', $user->id)->get();
+                $user->rm_list = SavingRm::select('id', 'name', 'account_type', 'rm_code', 'monthly_amount', 'installment_amount', 'opening_balance')->where('customer_id', $user->id)->get();
             }
 
             //$user = Auth::user();
