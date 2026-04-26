@@ -19,7 +19,7 @@ class DashboardController extends Controller
         try {
             $user = Auth::user();
             $dashboardData = [];
-            $dashboardData['total_rm'] = SavingRm::where('company_id', $user->company_id)->count();
+            $dashboardData['total_rms'] = SavingRm::where('company_id', $user->company_id)->count();
             $dashboardData['today_collection'] = SavingRmEntries::whereDate('created_at', date('Y-m-d'))->where('company_id', $user->company_id)->sum('amount');
             $dashboardData['yesterday_collection'] = SavingRmEntries::whereDate('created_at', date('Y-m-d', strtotime("-1 days")))->where('company_id', $user->company_id)->sum('amount');
             $dashboardData['today_entry_count'] = SavingRmEntries::whereDate('created_at', date('Y-m-d'))->where('company_id', $user->company_id)->count();
@@ -60,12 +60,10 @@ class DashboardController extends Controller
                     return ($monthlyPaidRms[$rm->id] ?? 0) >= $rm->monthly_amount;
                 })
                 ->count();
-            $dashboardData['total_rms'] = SavingRm::where('company_id', $user->company_id)->count();
 
             $dashboardData['fully_paid_rms'] = $fullyPaidRmCount;
 
-            $dashboardData['remaining_rms'] =
-                $dashboardData['total_rms'] - $dashboardData['fully_paid_rms'];
+            $dashboardData['remaining_rms'] = $dashboardData['total_rms'] - $dashboardData['fully_paid_rms'];
 
 
             for ($i = 0; $i < 12; $i++) {
