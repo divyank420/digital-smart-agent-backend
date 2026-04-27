@@ -21,8 +21,8 @@ class RmController extends Controller
     public function newRm(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'customer_id'        => 'required',
             'name'               => 'required',
-            'mobile'             => 'required|digits:10',
             'account_type'       => 'required',
             'monthly_amount'     => 'required|integer',
             'installment_amount' => 'required|integer',
@@ -35,19 +35,6 @@ class RmController extends Controller
         DB::beginTransaction();
 
         try {
-            $customer = SavingCustomer::firstOrCreate(
-                ['mobile' => $request->mobile],
-                [
-                    'name'     => $request->name,
-                    'email'    => $request->email,
-                    'password' => Hash::make('user@123'),
-                ]
-            );
-
-            if ($customer->wasRecentlyCreated) {
-                $customer->rm_code = 'RM' . str_pad($customer->id, 6, "0", STR_PAD_LEFT);
-                $customer->save();
-            }
 
             $user = Auth::user();
 
@@ -55,7 +42,7 @@ class RmController extends Controller
                 'name'               => ucwords($request->name),
                 'company_id'         => $user->company_id,
                 'agent_id'           => $user->id,
-                'customer_id'        => $customer->id,
+                'customer_id'        => $request->customer_id,
                 'account_type'       => $request->account_type,
                 'monthly_amount'     => $request->monthly_amount,
                 'installment_amount' => $request->installment_amount,
