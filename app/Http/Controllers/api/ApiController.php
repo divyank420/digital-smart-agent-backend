@@ -99,15 +99,21 @@ class ApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'email' => 'required',
+            //'email' => 'required',
             'mobile' => 'required',
         ]);
 
         if ($validator->fails()) {
-            $error = Helper::ValidationSet($validator->errors());
+            return Helper::sendResponse(Helper::ValidationSet($validator->errors()), 422);
         }
-        $customer = SavingCustomer::where('mobile', $request->mobile)->first();
-       
+
+        $customer = SavingCustomer::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'mobile' => $request->mobile,
+            'password' => Hash::make('User123'),
+        ]);
+
         $customerData = [
             'id' => $customer->id,
             'name' => $customer->name,

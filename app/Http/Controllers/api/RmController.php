@@ -37,26 +37,39 @@ class RmController extends Controller
         try {
 
             $user = Auth::user();
-
-            $rmData = SavingRm::create([
-                'name'               => ucwords($request->name),
-                'company_id'         => $user->company_id,
-                'agent_id'           => $user->id,
+            $name = ucwords(trim($request->name,''));
+            $existRm = SavingRm::where([
+                'name' => $name,
+                'company_id' => $user->company_id,
                 'customer_id'        => $request->customer_id,
-                'account_type'       => $request->account_type,
-                'monthly_amount'     => $request->monthly_amount,
-                'installment_amount' => $request->installment_amount,
-                'opening_month'      => $request->opening_month ?? date('m'),
-                'opening_year'       => $request->opening_year ?? date('Y'),
-                'opening_balance'    => $request->opening_balance ?? 0,
-            ]);
+            ])->first();
 
-            $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
-            $rmData->save();
+            $status = 0;
+            if (!$existRm) {
+                $rmData = SavingRm::create([
+                    'name'               => $name,
+                    'company_id'         => $user->company_id,
+                    'agent_id'           => $user->id,
+                    'customer_id'        => $request->customer_id,
+                    'account_type'       => $request->account_type,
+                    'monthly_amount'     => $request->monthly_amount,
+                    'installment_amount' => $request->installment_amount,
+                    'opening_month'      => $request->opening_month ?? date('m'),
+                    'opening_year'       => $request->opening_year ?? date('Y'),
+                    'opening_balance'    => $request->opening_balance ?? 0,
+                ]);
+
+                $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
+                $rmData->save();
+                $message = 'RM Successfully Added';
+                $status = 1;
+            }else{
+                $message = "RM already exist";
+
+            }
 
             DB::commit();
-
-            return Helper::sendResponse("RM Successfully Added", 200);
+            return Helper::sendResponse($message, $status);
         } catch (\Throwable $th) {
             DB::rollback();
             return Helper::sendResponse($th->getMessage(), 500);
@@ -85,7 +98,6 @@ class RmController extends Controller
             'name' => 'required',
             'mobile' => 'required',
             'account_type' => 'required',
-            'opening_balance' => 'required|integer',
         ]);
         if ($validator->fails()) {
             $error = Helper::ValidationSet($validator->errors());
@@ -95,19 +107,19 @@ class RmController extends Controller
 
         $rmData = SavingRm::find($request->rm_id);
 
-        $customer = SavingCustomer::where('mobile', $request->mobile)->first();
-        if (!empty($customer)) {
-            $rmData->customer_id = $customer->id;
-        } else {
-            $customer = SavingCustomer::find($request->customer_id);
-            if ($customer->mobile != '') {
-                $customer->mobile = $request->mobile;
-            }
-            if ($customer->email != '') {
-                $customer->email = $request->email;
-            }
-            $customer->save();
-        }
+        // $customer = SavingCustomer::where('mobile', $request->mobile)->first();
+        // if (!empty($customer)) {
+        //     $rmData->customer_id = $customer->id;
+        // } else {
+        //     $customer = SavingCustomer::find($request->customer_id);
+        //     if ($customer->mobile != '') {
+        //         $customer->mobile = $request->mobile;
+        //     }
+        //     if ($customer->email != '') {
+        //         $customer->email = $request->email;
+        //     }
+        //     $customer->save();
+        // }
 
         $rmData->name = $request->name;
         $rmData->account_type = $request->account_type;
