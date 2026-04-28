@@ -94,9 +94,9 @@ class RmController extends Controller
     public function editRm(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'customer_id' => 'required|integer',
             'rm_id' => 'required|integer',
             'name' => 'required',
-            'mobile' => 'required',
             'account_type' => 'required',
         ]);
         if ($validator->fails()) {
@@ -122,6 +122,7 @@ class RmController extends Controller
         // }
 
         $rmData->name = $request->name;
+        $rmData->customer_id = $request->customer_id;
         $rmData->account_type = $request->account_type;
         $rmData->opening_balance = $request->opening_balance;
         $rmData->opening_month = $request->opening_month;
