@@ -95,8 +95,12 @@ class ApiController extends Controller
         }
     }
 
-    public function getSettings(Request $request){
+    public function getConfigSettings(Request $request){
         $user = Auth::user();
+        $settings = [
+            'current_version' => '2.0.3',
+        ];
+        return sendResponse('Login Successful.', 200, $settings);
     }
 
     public function createCustomer(Request $request)
