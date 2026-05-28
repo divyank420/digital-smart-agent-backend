@@ -95,6 +95,10 @@ class ApiController extends Controller
         }
     }
 
+    public function getSettings(Request $request){
+        $user = Auth::user();
+    }
+
     public function createCustomer(Request $request)
     {
         $validator = Validator::make($request->all(), [

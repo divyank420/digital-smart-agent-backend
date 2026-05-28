@@ -40,6 +40,7 @@ Route::middleware('cors')->group(function () {
         Route::any('dashboard', [DashboardController::class, 'dashboard']);
         Route::post('dashboard-summary', [DashboardController::class, 'getDashboardSummary']);
         
+        Route::post('get-config-setting', [ApiController::class, 'createCustomer']);
         Route::post('create-customer', [ApiController::class, 'createCustomer']);
         Route::get('customer-detail', [ApiController::class, 'customerDetail']);
 
