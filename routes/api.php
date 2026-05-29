@@ -4,7 +4,7 @@ use App\Http\Controllers\api\ApiController;
 use App\Http\Controllers\api\DashboardController;
 //use App\Http\Controllers\api\admin\AdminDashboardController;
 use App\Http\Controllers\Agent\DenominationController;
-use App\Http\Controllers\Api\CompanyAccountController;
+use App\Http\Controllers\api\CompanyAccountController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
 use App\Http\Controllers\api\CustomersController;
