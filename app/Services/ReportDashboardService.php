@@ -31,7 +31,7 @@ class ReportDashboardService
 
         /* ACCOUNTS */
         $accounts = CompanyAccount::where('company_id', $user->company_id)
-            ->select('id', 'customer_name', 'bank_name', 'current_balance')
+            ->select('id', 'account_holder_name', 'bank_name', 'current_balance')
             ->get();
 
         /* DENOMINATION */
