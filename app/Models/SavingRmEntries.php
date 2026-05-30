@@ -96,6 +96,7 @@ class SavingRmEntries extends Model
             'deleted_at' => $this->deleted_at,
 
             'agent' => $this->Agent?->username ?? null,
+            'agent_fullname' => $this->Agent?->name ?? null,
 
             'trashed' => method_exists($this, 'trashed') ? $this->trashed() : false,
         ];
