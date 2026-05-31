@@ -292,12 +292,13 @@ class RmController extends Controller
             $year = $request->year ?? date('Y');
             $rmEntries = SavingRmEntries::with(['RmDetail', 'Agent'])->where(['rm_id' => $request->rm_id]);
             $rmEntries = $rmEntries->where(['payment_month' => intval($month), 'payment_year' => intval($year)]);
-            $totalAmount = $rmEntries->sum('amount');
+            $totalAmount = $rmEntries->clone()->sum('amount');
+            $totalTrashedAmount = $rmEntries->clone()->whereNotNull('deleted_at')->sum('amount');
             $rmEntries = $rmEntries->orderBy('entry_date', 'DESC')->get()->map->formatData()->toArray();
             if (!empty($rmEntries)) {
-                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount]);
+                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount,'total_trashed_amount'=>$totalTrashedAmount]);
             } else {
-                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount]);
+                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount,'total_trashed_amount'=>$totalTrashedAmount]);
             }
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());

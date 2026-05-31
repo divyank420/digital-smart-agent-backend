@@ -4,6 +4,7 @@ use App\Http\Controllers\api\ApiController;
 use App\Http\Controllers\api\DashboardController;
 //use App\Http\Controllers\api\admin\AdminDashboardController;
 use App\Http\Controllers\Agent\DenominationController;
+use App\Http\Controllers\api\CompanyAccountController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
 use App\Http\Controllers\api\CustomersController;
@@ -39,7 +40,8 @@ Route::middleware('cors')->group(function () {
     Route::middleware('jwt.verify')->group(function () {
         Route::any('dashboard', [DashboardController::class, 'dashboard']);
         Route::post('dashboard-summary', [DashboardController::class, 'getDashboardSummary']);
-        
+
+        Route::get('get-config-settings', [ApiController::class, 'getConfigSettings']);
         Route::post('create-customer', [ApiController::class, 'createCustomer']);
         Route::get('customer-detail', [ApiController::class, 'customerDetail']);
 
@@ -77,6 +79,15 @@ Route::middleware('cors')->group(function () {
         Route::Post('delete-expences', [ApiController::class, 'deleteExpences']);
 
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
+
+        /* Bank Accounts */
+        Route::prefix('bank-accounts')->group(function () {
+            Route::get('accounts-listing', [CompanyAccountController::class, 'index']);
+            Route::post('add-new-account', [CompanyAccountController::class, 'store']);
+            Route::put('update-account/{id}', [CompanyAccountController::class, 'update']);
+            Route::get('account-detail/{id}', [CompanyAccountController::class, 'show']);
+            Route::get('account-transactions/{id}', [CompanyAccountController::class, 'transactions']);
+        });
 
         /* Reports */
         Route::any('report-dashboard', [ReportsController::class, 'reportDashboard']);

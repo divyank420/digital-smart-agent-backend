@@ -178,13 +178,11 @@ class Helper
             $trackingMonth = 'previous';
 
         } elseif ($currentDepositAmount < $currentMonthlyAmount) {
-
             $month = $currentMonth;
             $year = $currentYear;
             $remainingAmount = $currentMonthlyAmount - $currentDepositAmount;
             $deposit = $currentDepositAmount;
         } else {
-
             $month = $nextMonth;
             $year = $nextYear;
             $remainingAmount = $nextMonthlyAmount;

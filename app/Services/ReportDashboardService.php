@@ -29,11 +29,6 @@ class ReportDashboardService
 
         $totalCustomers = SavingRm::where('company_id', $user->company_id)->count();
 
-        /* ACCOUNTS */
-        $accounts = CompanyAccount::where('company_id', $user->company_id)
-            ->select('id', 'customer_name', 'bank_name', 'current_balance')
-            ->get();
-
         /* DENOMINATION */
         $denominationTotals = SavingDenomination::where('company_id', $user->company_id)
             ->whereMonth('denomination_date', $month)
@@ -91,8 +86,6 @@ class ReportDashboardService
                 'totalCustomers',
                 'totalCustomersEnteries'
             ),
-
-            'accounts' => $accounts,
         ];
     }
 
