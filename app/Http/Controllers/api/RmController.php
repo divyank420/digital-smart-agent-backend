@@ -55,7 +55,7 @@ class RmController extends Controller
                 'name'               => ucwords($request->name),
                 'company_id'         => $user->company_id,
                 'agent_id'           => $user->id,
-                'customer_id'        => $customer->id,
+                'customer_id'        => $request->customer_id,
                 'account_type'       => $request->account_type,
                 'monthly_amount'     => $request->monthly_amount,
                 'installment_amount' => $request->installment_amount,

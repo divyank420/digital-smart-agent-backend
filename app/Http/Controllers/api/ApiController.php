@@ -9,6 +9,7 @@ use App\Models\SavingDenomination;
 use App\Models\SavingCompany;
 use App\Models\SavingCustomer;
 use App\Models\SavingExpenses;
+use App\Models\SavingFamilyMember;
 use App\Models\SavingRm;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -94,9 +95,31 @@ class ApiController extends Controller
         }
     }
 
+    public function createCustomer(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'email' => 'required',
+            'mobile' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            $error = Helper::ValidationSet($validator->errors());
+        }
+        $customer = SavingCustomer::where('mobile', $request->mobile)->first();
+       
+        $customerData = [
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'email' => $customer->email,
+            'mobile' => $customer->mobile,
+        ];
+        Helper::sendResponse('Customer Created', 1, $customerData);
+    }
+
     public function customerDetail(Request $request)
     {
-        $query = SavingCustomer::query()->select('name','id','email','mobile','status','is_password_updated');
+        $query = SavingCustomer::query()->select('name', 'id', 'email', 'mobile', 'status', 'is_password_updated');
 
         if ($request->filled('mobile')) {
             $query->where('mobile', $request->mobile);
@@ -113,7 +136,7 @@ class ApiController extends Controller
         if ($customerDetail) {
             return Helper::sendResponse('Customer Detail', 1, $customerDetail);
         } else {
-            return Helper::sendResponse('Customer Not Found', 0 , null);
+            return Helper::sendResponse('Customer Not Found', 0, null);
         }
     }
 
