@@ -11,12 +11,12 @@ return new class extends Migration {
             $table->id();
 
             $table->unsignedBigInteger('company_id');
-            $table->string('customer_name');
+            $table->string('account_holder_name');
             $table->string('bank_name');
 
             // Account type (India standard)
-            $table->enum('account_type', ['saving', 'current', 'cc', 'od'])
-                ->default('current');
+            $table->enum('account_type', ['saving', 'current', 'cash', 'upi'])
+                ->default('saving');
 
             // Financials
             $table->decimal('opening_balance', 15, 2)->default(0);

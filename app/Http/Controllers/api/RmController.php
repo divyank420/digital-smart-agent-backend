@@ -21,8 +21,8 @@ class RmController extends Controller
     public function newRm(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'customer_id'        => 'required',
             'name'               => 'required',
+            'mobile'             => 'required|digits:10',
             'account_type'       => 'required',
             'monthly_amount'     => 'required|integer',
             'installment_amount' => 'required|integer',
@@ -35,6 +35,19 @@ class RmController extends Controller
         DB::beginTransaction();
 
         try {
+            $customer = SavingCustomer::firstOrCreate(
+                ['mobile' => $request->mobile],
+                [
+                    'name'     => $request->name,
+                    'email'    => $request->email,
+                    'password' => Hash::make('user@123'),
+                ]
+            );
+
+            if ($customer->wasRecentlyCreated) {
+                $customer->rm_code = 'RM' . str_pad($customer->id, 6, "0", STR_PAD_LEFT);
+                $customer->save();
+            }
 
             $user = Auth::user();
             $name = ucwords(trim($request->name,''));
@@ -279,12 +292,13 @@ class RmController extends Controller
             $year = $request->year ?? date('Y');
             $rmEntries = SavingRmEntries::with(['RmDetail', 'Agent'])->where(['rm_id' => $request->rm_id]);
             $rmEntries = $rmEntries->where(['payment_month' => intval($month), 'payment_year' => intval($year)]);
-            $totalAmount = $rmEntries->sum('amount');
+            $totalAmount = $rmEntries->clone()->sum('amount');
+            $totalTrashedAmount = $rmEntries->clone()->whereNotNull('deleted_at')->sum('amount');
             $rmEntries = $rmEntries->orderBy('entry_date', 'DESC')->get()->map->formatData()->toArray();
             if (!empty($rmEntries)) {
-                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount]);
+                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount,'total_trashed_amount'=>$totalTrashedAmount]);
             } else {
-                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount]);
+                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount,'total_trashed_amount'=>$totalTrashedAmount]);
             }
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());

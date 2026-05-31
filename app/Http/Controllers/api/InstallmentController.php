@@ -20,7 +20,7 @@ class InstallmentController extends Controller
             'id' => 'required',
         ], ['id.required' => 'Something went wrong']);
 
-        $entry = SavingRmEntries::where('id', $request->id)->first();
+        $entry = SavingRmEntries::with('transaction.account')->where('id', $request->id)->first()->formatData();
         if (!empty($entry)) {
             sendResponse('Entry Detail', 1, $entry);
         } else {
