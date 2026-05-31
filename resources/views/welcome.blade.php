@@ -33,7 +33,7 @@
     <meta property="og:title" content="Digital Smart Agent (DSA) — We make your work easy">
     <meta property="og:description"
         content="Digital Smart Agent (DSA) — an innovative platform to streamline and optimize various aspects for your Post Office Agents, Collection Agents to manage daily customer collections, transactions, expenses, Monthly Posting Reports, WhatsApp updates.">
-    <meta property="og:image" content="{{ asset('assets/trans_app_logo.png') }}">
+    <meta property="og:image" content="{{ asset('assets/og_image.png') }}">
     <meta property="og:url" content="https://www.digitalsmartagent.com">
     <meta property="og:type" content="website">
 

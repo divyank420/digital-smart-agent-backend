@@ -61,7 +61,7 @@ class SavingRmEntries extends Model
 
     public function formatData()
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->RmDetail?->name,
             'rm_code' => $this->RmDetail?->rm_code,
@@ -96,9 +96,16 @@ class SavingRmEntries extends Model
             'deleted_at' => $this->deleted_at,
 
             'agent' => $this->Agent?->username ?? null,
+            'agent_fullname' => $this->Agent?->name ?? null,
 
             'trashed' => method_exists($this, 'trashed') ? $this->trashed() : false,
         ];
+
+        if($this->transaction){
+            $data['transaction'] = $this->transaction;
+            $data['account'] = $this->transaction->account;
+        }
+        return $data;
     }
     public function excelFormatData()
     {
