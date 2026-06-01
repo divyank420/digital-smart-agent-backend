@@ -98,7 +98,7 @@ class Helper
         /* Last Entry Data */
         $entryData = SavingRmEntries::where(['rm_id' => $rmId])->orderBy('id', 'DESC')->first();
 
-        $summary = self::getRmPaymentSummary($rmId,true);
+        $summary = self::getRmPaymentSummary($rmId, true);
 
         if (!empty($entryData)) {
             $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
@@ -108,7 +108,8 @@ class Helper
         ];
         return array_merge($entrySetup, $summary);
     }
-    public static function getRmPaymentSummary($rmId,$isLastEntry = false){
+    public static function getRmPaymentSummary($rmId, $isLastEntry = false)
+    {
         $now = now();
         $currentMonth = (int)$now->month;
         $currentYear = (int)$now->year;
@@ -176,7 +177,6 @@ class Helper
             $remainingAmount = $previousMonthlyAmount - $lastDepositAmount;
             $deposit = $lastDepositAmount;
             $trackingMonth = 'previous';
-
         } elseif ($currentDepositAmount < $currentMonthlyAmount) {
             $month = $currentMonth;
             $year = $currentYear;
@@ -546,5 +546,12 @@ class Helper
         } catch (\Exception $e) {
             return $url; // fallback
         }
+    }
+
+    public static function getCustomerAgentsList($customerId, $type = 'list')
+    {
+        $companies =  SavingRm::where('customer_id', $customerId)->groupBy('company_id')->pluck('company_id')->toArray();
+        $agents = SavingCompany::whereIn('id',$companies)->get();
+        return $agents;
     }
 }

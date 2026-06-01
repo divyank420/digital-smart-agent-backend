@@ -21,10 +21,12 @@ class CustomersController extends Controller
     public function dashboard(Request $request){
 
         $rms_accounts = SavingRm::where('customer_id',$this->user->id)->pluck('id');
-        $accounts_total = SavingRmEntries::with('RmDetail')->select([
+        $accounts_total = SavingRmEntries::with(['RmDetail:id,name,rm_code,monthly_amount,installment_amount'])->select([
             'rm_id',
             DB::raw('SUM(amount) as account_total'),
         ])->whereIn('rm_id',$rms_accounts)->groupBy('rm_id')->get();
+        
+
         return Helper::sendResponse("Dashboard Data",1,$accounts_total);
     }
     public function portfolio(Request $request){
