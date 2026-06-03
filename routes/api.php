@@ -5,6 +5,7 @@ use App\Http\Controllers\api\DashboardController;
 //use App\Http\Controllers\api\admin\AdminDashboardController;
 use App\Http\Controllers\Agent\DenominationController;
 use App\Http\Controllers\api\CompanyAccountController;
+use App\Http\Controllers\api\Customer\AuthController;
 use App\Http\Controllers\api\Customer\CustomerApiController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
@@ -121,6 +122,7 @@ Route::middleware('cors')->group(function () {
 
 // Customer App Apis
 Route::prefix('customer')->group(function () {
+    Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [ApiController::class, 'login']);
     Route::post('yearly-report-summary', [CustomersController::class, 'yearlyReportSummary']);
 

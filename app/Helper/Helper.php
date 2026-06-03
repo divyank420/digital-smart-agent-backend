@@ -108,7 +108,7 @@ class Helper
         ];
         return array_merge($entrySetup, $summary);
     }
-    public static function getRmPaymentSummary($rmId, $isLastEntry = false)
+    public static function getRmPaymentSummary($rmId)
     {
         $now = now();
         $currentMonth = (int)$now->month;
@@ -118,8 +118,7 @@ class Helper
         $nextMonth = (int)$now->copy()->addMonth()->month;
         $nextYear = (int)$now->copy()->addMonth()->year;
 
-        $rowData = SavingRmEntries::leftJoin('saving_rms', 'rm_id', '=', 'saving_rms.id')
-            ->where('rm_id', $rmId)
+        $rowData = SavingRmEntries::where('rm_id', $rmId)
             ->select(
                 'rm_id',
                 DB::raw('SUM(amount) as total_deposit'),
@@ -157,9 +156,9 @@ class Helper
         // load monthly amount history once
         $history = Helper::getEffectiveMonthlyAmount($rmId, null, null, 'all');
 
-        $rm = SavingRm::find($rmId);
-        $openMonth = (int)$rm->open_month;
-        $openYear = (int)$rm->open_year;
+        $rm = SavingRm::findOrFail($rmId);
+        $openMonth = (int)$rm->opening_month;
+        $openYear = (int)$rm->opening_year;
 
         // resolve monthly amounts
         $previousMonthlyAmount = Helper::resolveMonthlyAmount($history, $rm->monthly_amount, $lastMonth, $lastYear);
@@ -167,7 +166,7 @@ class Helper
         $nextMonthlyAmount = Helper::resolveMonthlyAmount($history, $rm->monthly_amount, $nextMonth, $nextYear);
 
         $trackingMonth = 'current';
-
+        //$lastMonthValid = $previousMonthDate->greaterThanOrEqualTo($openingDate);
         $lastMonthValid = !($lastYear < $openYear || ($lastYear == $openYear && $lastMonth < $openMonth));
 
         if ($lastMonthValid && ($lastDepositAmount < $previousMonthlyAmount)) {
@@ -551,7 +550,7 @@ class Helper
     public static function getCustomerAgentsList($customerId, $type = 'list')
     {
         $companies =  SavingRm::where('customer_id', $customerId)->groupBy('company_id')->pluck('company_id')->toArray();
-        $agents = SavingCompany::whereIn('id',$companies)->get();
+        $agents = SavingCompany::whereIn('id', $companies)->get();
         return $agents;
     }
 }

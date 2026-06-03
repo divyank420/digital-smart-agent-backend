@@ -61,42 +61,42 @@ Route::prefix('agent')->group(function () {
 });
 
 
-// Route::get('/test-fcm', function () {
+Route::get('/test-fcm', function () {
 
-//     $deviceToken = "c2BvY7lXQ2ST_LS_spovTY:APA91bGuRyeo2f5iDwcc7C-OXx9gdrIalUJEAY3NwVOD34RUXU6ee0bRBzAcJZH9Ljp08SBZqBUAp1UqzPmBb32o7JNaBDfvy-f1UIBMIViurJiKWLLhvAE";
+    $deviceToken = "dqtDUG6_TS2AYKkH66GeaD:APA91bFXl_ai9C7-maZU8aNicIdMPrEzHmKiRu7-jO9mnhMV_zD8LJslV-ZZxo4HZfeVrdU66lNRE1cJo-YgImMUxp3_UrR57I159Y0CXKcEJtUQl8ZamNM";
 
-//     $credentials = json_decode(
-//         file_get_contents(storage_path('app/firebase/firebase.json')),
-//         true
-//     );
+    $credentials = json_decode(
+        file_get_contents(storage_path('app/firebase/firebase.json')),
+        true
+    );
 
-//     $client = new \Google\Auth\Credentials\ServiceAccountCredentials(
-//         "https://www.googleapis.com/auth/firebase.messaging",
-//         $credentials
-//     );
+    $client = new \Google\Auth\Credentials\ServiceAccountCredentials(
+        "https://www.googleapis.com/auth/firebase.messaging",
+        $credentials
+    );
 
-//     $token = $client->fetchAuthToken();
-//     $accessToken = $token['access_token'];
+    $token = $client->fetchAuthToken();
+    $accessToken = $token['access_token'];
 
-//     $projectId = $credentials['project_id'];
+    $projectId = $credentials['project_id'];
 
-//     $response = Http::withToken($accessToken)
-//         ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
-//             "message" => [
-//                 "token" => $deviceToken,
-//                 "notification" => [
-//                     "title" => "Laravel Test 🚀",
-//                     "body" => "Notification is working!",
-//                     "android_channel_id" => "default_channel_id",
-//                 ],
-//                 "android" => [
-//                     "notification" => [
-//                         "sound" => "default",
-//                         "default_sound" => true
-//                     ]
-//                 ]
-//             ]
-//         ]);
+    $response = Http::withToken($accessToken)
+        ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+            "message" => [
+                "token" => $deviceToken,
+                "notification" => [
+                    "title" => "Laravel Test 🚀",
+                    "body" => "Notification is working!",
+                    //"android_channel_id" => "default_channel_id",
+                ],
+                "android" => [
+                    "notification" => [
+                        "sound" => "default",
+                        "default_sound" => true
+                    ]
+                ]
+            ]
+        ]);
 
-//     return $response->json();
-// });
+    return $response->json();
+});
