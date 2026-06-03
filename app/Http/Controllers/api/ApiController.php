@@ -440,4 +440,34 @@ class ApiController extends Controller
             sendResponse($th->getMessage());
         }
     }
+    public function uploadProductionApp(Request $request)
+    {
+        try {
+
+            $request->validate([
+                'apk' => 'required|file|mimes:apk|max:102400' // 100 MB
+            ]);
+
+            $destinationPath = public_path('application');
+
+            if (!file_exists($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
+            $file = $request->file('apk');
+
+            $file->move(
+                $destinationPath,
+                'digitalsmartagent.apk'
+            );
+
+            return Helper::sendResponse('APK uploaded successfully.', 1);
+        } catch (\Throwable $th) {
+
+            return Helper::sendResponse(
+                $th->getMessage(),
+                0
+            );
+        }
+    }
 }
