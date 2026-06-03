@@ -43,8 +43,9 @@ class InstallmentController extends Controller
                 return Helper::sendResponse("Customer Not found", 0);
             }
             $user = Auth::user();
+            $companyId = $user->company_id;
             /* ---------------- BASIC DATA ---------------- */
-            $requestData['company_id'] = $user->company_id;
+            $requestData['company_id'] = $companyId;
 
             $requestData['entry_date'] = $request->entry_date
                 ? date('Y-m-d', strtotime($request->entry_date))
@@ -54,7 +55,7 @@ class InstallmentController extends Controller
 
             if ($request->amount_type === 'online' && $request->account) {
                 CompanyAccount::where('id', $request->account)
-                    ->where('company_id', $user->company_id)
+                    ->where('company_id', $companyId)
                     ->firstOrFail();
 
                 $requestData['account_id'] = (int)$request->account;
@@ -68,16 +69,16 @@ class InstallmentController extends Controller
 
                 $entry = SavingRmEntries::create($requestData);
 
-                app(NotificationService::class)->send(
-                    $rmDetail->customer,
-                    'RD Installment Received',
-                    'Your RD installment of ₹' . $request->amount . ' has been successfully deposited.',
-                    'rm_installment_entry',
-                    [
-                        'rm_id' => $request->rm_id,
-                        'amount' => $request->amount
-                    ]
-                );
+                // app(NotificationService::class)->send(
+                //     $rmDetail->customer,
+                //     'RD Installment Received',
+                //     'Your RD installment of ₹' . $request->amount . ' has been successfully deposited.',
+                //     'rm_installment_entry',
+                //     [
+                //         'rm_id' => $request->rm_id,
+                //         'amount' => $request->amount
+                //     ]
+                // );
             });
 
             if (isset($request->is_whatsapp_message)) {
@@ -86,7 +87,6 @@ class InstallmentController extends Controller
                 if (!$sentWhatsappMessage) {
                     return Helper::sendResponse("Entry recorded. WhatsApp message skipped.", 1);
                 }
-                
             }
 
             /* ---------------- AFTER SUMMARY ---------------- */
