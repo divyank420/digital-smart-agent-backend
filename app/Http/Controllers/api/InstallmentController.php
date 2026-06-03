@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
 use App\Models\SavingRm;
 use App\Models\SavingRmEntries;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -63,15 +64,29 @@ class InstallmentController extends Controller
             $before = (object) Helper::getRmPaymentSummary($request->rm_id);
 
             /* ---------------- SAVE ENTRY ---------------- */
-            SavingRmEntries::create($requestData);
-            
+            DB::transaction(function () use ($request, $requestData, $rmDetail) {
+
+                $entry = SavingRmEntries::create($requestData);
+
+                app(NotificationService::class)->send(
+                    $rmDetail->customer,
+                    'RD Installment Received',
+                    'Your RD installment of ₹' . $request->amount . ' has been successfully deposited.',
+                    'rm_installment_entry',
+                    [
+                        'rm_id' => $request->rm_id,
+                        'amount' => $request->amount
+                    ]
+                );
+            });
+
             if (isset($request->is_whatsapp_message)) {
-
+                
                 $sentWhatsappMessage = filter_var($request->is_whatsapp_message, FILTER_VALIDATE_BOOLEAN);
-
                 if (!$sentWhatsappMessage) {
                     return Helper::sendResponse("Entry recorded. WhatsApp message skipped.", 1);
                 }
+                
             }
 
             /* ---------------- AFTER SUMMARY ---------------- */
@@ -165,6 +180,7 @@ class InstallmentController extends Controller
             return Helper::sendResponse($th->getMessage(), 0);
         }
     }
+
     public function editInstallmentEnter(Request $request)
     {
         $requestData = $request->all();

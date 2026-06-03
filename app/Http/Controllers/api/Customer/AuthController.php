@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers\api\Customer;
 
+use App\Helper\Helper;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
+use App\Models\SavingCustomer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -41,6 +46,34 @@ class AuthController extends Controller
             return sendResponse('Login Successful.', 200, ['token' => $token, 'userData' => $user]);
         } catch (\Throwable $th) {
             sendResponse($th->getMessage());
+        }
+    }
+
+    public function register(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'name'     => 'required|string|max:255',
+                'email'    => 'nullable|email|max:255|unique:customers,email',
+                'mobile'   => 'required|digits:10|unique:customers,mobile',
+                'password' => 'required|string|min:6',
+            ]);
+
+            if ($validator->fails()) {
+                return Helper::sendResponse($validator->errors());
+            }
+
+            DB::beginTransaction();
+            $customer = SavingCustomer::create([
+                'name'     => $request->name,
+                'email'    => $request->email,
+                'mobile'   => $request->mobile,
+                'password' => Hash::make($request->password),
+            ]);
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return Helper::sendResponse($th->getMessage(), 0);
         }
     }
 }

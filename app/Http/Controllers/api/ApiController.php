@@ -69,6 +69,15 @@ class ApiController extends Controller
             }
 
             $user = Auth::guard($guard)->user();
+            if (!empty($request->fcm_token)) {
+
+                app(\App\Services\FcmTokenService::class)
+                    ->register(
+                        $user,
+                        $request->fcm_token,
+                        $request->device_type ?? null
+                    );
+            }
             if ($guard != 'customer') {
                 $agent_data = User::where('company_id', $user->company_id)
                     ->whereNotIn('id', [1])
