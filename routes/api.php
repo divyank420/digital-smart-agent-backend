@@ -106,6 +106,8 @@ Route::middleware('cors')->group(function () {
         });
     });
 
+    Route::get('upload-production-app', [ApiController::class, 'upload-production-app']);
+
     Route::get('generate-pdf-report', [ReportsController::class, 'generatePdfReport'])->name('api.collection_pdf_report');
     Route::get('monthly-posting-report', [PdfReportController::class, 'monthlyPostingReport']);
     Route::get('customer-installment-report', [PdfReportController::class, 'getCustomerInstallmentReport']);
