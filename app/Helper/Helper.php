@@ -108,8 +108,13 @@ class Helper
         ];
         return array_merge($entrySetup, $summary);
     }
+
     public static function getRmPaymentSummary($rmId, $isLastEntry = false)
     {
+        $isSingle = !is_array($rmId);
+        if ($isSingle) {
+            $rmIds = [$rmId];
+        }
         $now = now();
         $currentMonth = (int)$now->month;
         $currentYear = (int)$now->year;
@@ -204,69 +209,6 @@ class Helper
             'monthly_amount' => $currentMonthlyAmount,
             'tracking_month' => $trackingMonth
         ];
-    }
-    public static function getRmPaymentSummary_old($rmId)
-    {
-        $currentMonth = (int)date('m');
-        $currentYear = (int)date('Y');
-        $lastMonth = (int)date('m', strtotime(date('Y-m-d') . '-1 month'));
-        $lastYear = (int)date('Y', strtotime(date('Y-m-d') . '-1 month'));
-        $nextMonth = (int)date('m', strtotime(date('Y-m-d') . '+1 month'));
-        $nextYear = (int)date('Y', strtotime(date('Y-m-d') . '+1 month'));
-
-        $rowData = SavingRmEntries::leftJoin('saving_rms', 'rm_id', '=', 'saving_rms.id')
-            ->select(
-                DB::raw('CAST(sum(amount) as INT) as total_deposit'),
-                'monthly_amount',
-                DB::raw('SUM(CASE WHEN payment_month = "' . $lastMonth . '" and payment_year = "' . $lastYear . '" THEN amount else 0 END) AS last_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = "' . $currentMonth . '" and payment_year = "' . $currentYear . '" THEN amount else 0 END) AS current_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = "' . $nextMonth . '" and payment_year = "' . $nextYear . '" THEN amount else 0 END) AS next_month_deposit'),
-            )->where('rm_id', $rmId)
-            ->first();
-        $month = (int)date('m');
-        $year = (int)date('Y');
-
-        $monthlyAmountHistory = Helper::getEffectiveMonthlyAmount($rowData->rm_id, null, null, 'all');
-
-        $previous_monthly_amount = Helper::resolveMonthlyAmount($monthlyAmountHistory, 0, $lastMonth, $lastYear);
-        $monthly_amount = Helper::resolveMonthlyAmount($monthlyAmountHistory, 0, $currentMonth, $currentYear);
-        $lastDepositAmount = (int)$rowData->last_deposit;
-        $currentDepositAmount = (int)$rowData->current_deposit;
-        $nextDepositAmount = (int)$rowData->next_month_deposit;
-        $trackingMonth = 'current';
-        if ($lastDepositAmount < $previous_monthly_amount) {
-            $month = $lastMonth;
-            $year = $lastYear;
-            $remainingAmount = $previous_monthly_amount - $lastDepositAmount;
-            $trackingMonth = 'previous';
-            $deposit = $lastDepositAmount;
-        } else if ($currentDepositAmount <= $monthly_amount) {
-            $month = $currentMonth;
-            $year = $currentYear;
-            $remainingAmount = $monthly_amount - $currentDepositAmount;
-            $deposit = $currentDepositAmount;
-        } else {
-            $month = $nextMonth;
-            $year = $nextYear;
-            $remainingAmount = $monthly_amount;
-            $trackingMonth = 'advance';
-            $deposit = $nextDepositAmount;
-        }
-        $entrySetup = [
-            'last_month' => $lastMonth,
-            'last_year' => $lastYear,
-            'current_month' => $currentMonth,
-            'current_year' => $currentYear,
-            'month' => $month,
-            'year' => $year,
-            'last_month_deposit' => $lastDepositAmount,
-            'current_month_deposit' => $currentDepositAmount,
-            'deposit_amount' => $deposit,
-            'remaining_amount' => $remainingAmount,
-            'monthly_amount' => $monthly_amount,
-            'tracking_month' => $trackingMonth
-        ];
-        return $entrySetup;
     }
     public static function getLastEntry_old($rmId)
     {
@@ -551,7 +493,7 @@ class Helper
     public static function getCustomerAgentsList($customerId, $type = 'list')
     {
         $companies =  SavingRm::where('customer_id', $customerId)->groupBy('company_id')->pluck('company_id')->toArray();
-        $agents = SavingCompany::whereIn('id',$companies)->get();
+        $agents = SavingCompany::whereIn('id', $companies)->get();
         return $agents;
     }
 }

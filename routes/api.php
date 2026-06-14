@@ -5,7 +5,6 @@ use App\Http\Controllers\api\DashboardController;
 //use App\Http\Controllers\api\admin\AdminDashboardController;
 use App\Http\Controllers\Agent\DenominationController;
 use App\Http\Controllers\api\CompanyAccountController;
-use App\Http\Controllers\api\Customer\CustomerApiController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
 use App\Http\Controllers\api\CustomersController;
@@ -116,20 +115,5 @@ Route::middleware('cors')->group(function () {
     Route::prefix('agent')->group(function () {
         //Route::any('dashboard', [AdminDashboardController::class, 'dashboard']);
         Route::get('/get-denomination',  [DenominationController::class, 'getDenominationList'])->name('getDenominationList');
-    });
-});
-
-// Customer App Apis
-Route::prefix('customer')->group(function () {
-    Route::post('login', [ApiController::class, 'login']);
-    Route::post('yearly-report-summary', [CustomersController::class, 'yearlyReportSummary']);
-
-    Route::middleware('jwt.verify')->group(function () {
-        Route::post('update-password', [CustomerApiController::class, 'updatePassword']);
-        Route::post('update-profile', [CustomerApiController::class, 'updateProfile']);
-
-        Route::controller(CustomersController::class)->group(function () {
-            Route::get('dashboard', 'dashboard');
-        });
     });
 });
