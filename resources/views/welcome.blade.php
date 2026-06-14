@@ -1018,6 +1018,18 @@
                     .location.search);
             });
         });
+
+        if(window.electronBridge){
+            console.log('RUnning inside digital smart desktop app');
+            window.electronBridge.onSyncStatus((response)=>{
+                if(response.succes){
+                    alert("success"+response);
+                    window.location.reload();
+                }else{
+                    alert("X sync error"+response.message);
+                }
+            })
+        }
     </script>
 </body>
 
