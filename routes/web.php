@@ -26,6 +26,9 @@ Route::get('/', function () {
     return view('welcome');
     return view('SEO.index');
 });
+Route::get('/dop-login', function () {
+    return view('dopLogin');
+});
 Route::get('/rms-code', function () {
     return view('RmCode');
 });

@@ -377,6 +377,7 @@
                         <i class="fa-regular fa-envelope"></i> Contact Us
                     </a>
                 </div>
+                <button onclick="triggerDopPortal()" id="open-dop-btn">Open Agent Portal</button>
                 <div class="mt-10 flex items-center gap-8 text-sm text-white/70">
                     <div class="flex items-center gap-2"><i class="fa-solid fa-shield-halved text-accent"></i> Secure
                         &
@@ -1029,6 +1030,13 @@
                     alert("X sync error"+response.message);
                 }
             })
+        }
+        function triggerDopPortal(){
+            if(window.electronBridge && typeof window.electronBridge.launchDopPortal === 'function'){
+                window.electronBridge.launchDopPortal();
+            }else{
+                console.log("Noto running inside electron app wrapper shell")
+            }
         }
     </script>
 </body>

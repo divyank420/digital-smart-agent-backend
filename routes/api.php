@@ -8,9 +8,11 @@ use App\Http\Controllers\api\CompanyAccountController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
 use App\Http\Controllers\api\CustomersController;
+use App\Http\Controllers\api\Dop\DopAccountSyncController;
 use App\Http\Controllers\api\ReportsController;
 use App\Http\Controllers\api\PdfReportController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -116,4 +118,6 @@ Route::middleware('cors')->group(function () {
         //Route::any('dashboard', [AdminDashboardController::class, 'dashboard']);
         Route::get('/get-denomination',  [DenominationController::class, 'getDenominationList'])->name('getDenominationList');
     });
+
+    Route::post('/dop_accounts_syncing',  [DopAccountSyncController::class, 'syncRecords']);
 });
