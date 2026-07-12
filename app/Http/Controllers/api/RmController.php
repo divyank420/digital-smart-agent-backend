@@ -72,7 +72,7 @@ class RmController extends Controller
                     'opening_balance'    => $request->opening_balance ?? 0,
                 ]);
 
-                $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
+                $rmData->rm_code = 'RM-' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
                 $rmData->save();
                 $message = 'RM Successfully Added';
                 $status = 1;
