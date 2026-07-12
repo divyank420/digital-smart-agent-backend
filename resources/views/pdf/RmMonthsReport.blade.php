@@ -262,9 +262,9 @@
                         <!-- LEFT: Agent -->
                         <td style="width: 33%; vertical-align: top; text-align: left;">
                             <div class="receipt-right">
-                                <h5>{{ $company->firm_name }}</h5>
-                                <p><b>Agent :</b> {{ $company->agent_name }}</p>
-                                <p><b>Email :</b> {{ $company->email }}</p>
+                                <h5>{{ $company->company_name }}</h5>
+                                <p><b>Agent :</b> {{ $company->owner_name }}</p>
+                                <p><b>Email :</b> {{ $company->email??'' }}</p>
                                 <p><b>Mobile :</b> {{ $company->mobile }}</p>
                             </div>
                         </td>
