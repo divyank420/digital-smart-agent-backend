@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
+use App\Models\DopAgent;
 use App\Models\SavingDenomination;
 use App\Models\SavingCompany;
 use App\Models\SavingCustomer;
@@ -60,7 +61,6 @@ class ApiController extends Controller
                 $token = Auth::guard('customer')->attempt(['mobile' => $request->mobile, 'password' => $request->password]);
             }
             try {
-                //if (! $token = JWTAuth::attempt($credentials)) {
                 if (! $token) {
                     return sendResponse('Login credentials are invalid.', 400);
                 }
@@ -79,9 +79,14 @@ class ApiController extends Controller
                     'label' => 'All Agents',
                     'value' => ''
                 ])->toArray();
+                $dop_agents = DopAgent::select('agent_name as label', 'id as value')->where('company_id',$user->company_id)->prepend([
+                    'label' => 'All Dop Agents',
+                    'value' => ''
+                ])->toArray();
                 $accounts = CompanyAccount::where('company_id', $user->company_id)->where('is_active', true)->get();
                 $user->agent_list = $agent_lists;
                 $user->accounts = $accounts;
+                $user->dop_agents = $dop_agents;
             }
             if ($guard == 'customer') {
 
@@ -207,18 +212,21 @@ class ApiController extends Controller
     {
         try {
             $requestData = $request->all();
-            if (isset($request->selected_date) && !empty($request->selected_date)) {
-                $selectedDate = date('Y-m-d', strtotime($request->selected_date));
-            }
             $user = Auth::user();
-
             $requestData['company_id'] =  $user->company_id;
-            $requestData['denomination_date'] = date('Y-m-d', strtotime($requestData['denomination_date'])) ?? date('Y-m-d');
-            $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id' => $requestData['company_id']])->whereDate('denomination_date', $requestData['denomination_date'])->where('user_id', $user->id)->first();
-
-            if (!empty($checkAlreadyAddedDenomination)) {
-                $checkAlreadyAddedDenomination->fill($requestData);
-                $checkAlreadyAddedDenomination->save();
+            if(isset($requestData['denomination_date']) && !empty($requestData['denomination_date'])){
+                $requestData['denomination_date'] = date('Y-m-d', strtotime($requestData['denomination_date'])) ?? date('Y-m-d');
+            }
+            $denominationData = SavingDenomination::where(['company_id' => $requestData['company_id']])
+                ->where('id', $request->id)
+                ->when($user->role != 'Developer', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })
+                ->first();
+                
+                if (!empty($denominationData)) {
+                $denominationData->fill($requestData);
+                $denominationData->save();
                 sendResponse('Denomination Updated Successful', 1);
             } else {
                 sendResponse('Something went wrong');
@@ -230,10 +238,45 @@ class ApiController extends Controller
 
     public function denominationList(Request $request)
     {
-        $userId = $request->user_id ?? Auth::user()->id;
-        $date = \Carbon\Carbon::today()->subDays(7);
-        $denominationList = SavingDenomination::where('user_id', $userId)->whereDate('denomination_date', '>=', $date)->get();
+        $user = Auth::user();
+        $companyId = $user->company_id;
+
+        $denominationList = SavingDenomination::where('company_id', $companyId)
+            ->whereMonth('denomination_date', date('m') - 1)
+            ->whereYear('denomination_date', date('Y'))
+            ->when($user->role != 'Developer', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->get()
+            ->map(function ($item) {
+                $breakdown = [];
+                $notes = [2000, 500, 200, 100, 50, 20, 10];
+
+                foreach ($notes as $note) {
+                    $column = "n_{$note}";
+                    if (!is_null($item->$column)) {
+                        $breakdown[$note] = (int)$item->$column;
+                    }
+                }
+
+                return [
+                    'id' => $item->id,
+                    'company_id' => $item->company_id,
+                    'user_id' => $item->user_id,
+                    'online' => $item->online,
+                    'type' => $item->type,
+                    'total' => $item->total,
+                    'denomination_date' => $item->denomination_date,
+                    'breakdown' => $breakdown,
+                ];
+            });
         sendResponse('Denomination List', 1, $denominationList);
+    }
+    public function getDenominationDetail(Request $request)
+    {
+        $user = Auth::user();
+        $data = SavingDenomination::where('company_id', $user->company_id)->where('id', $request->id)->first();
+        sendResponse('Denomination Detai;', 1, $data);
     }
     public function denominationDetail(Request $request)
     {

@@ -37,7 +37,7 @@
     <meta property="og:url" content="https://www.digitalsmartagent.com">
     <meta property="og:type" content="website">
 
-    
+
     <link rel="canonical" href="https://www.digitalsmartagent.com/" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -115,6 +115,7 @@
             transition: all .3s ease;
             box-shadow: 0 10px 30px -10px rgba(135, 10, 48, 0.6);
         }
+
         .btn-dark {
             background: linear-gradient(135deg, #001d41, #800000);
             color: #fff;
@@ -368,7 +369,7 @@
                     all from your pocket.
                 </p>
                 <div class="mt-9 flex flex-wrap gap-4">
-                    <a href="{{asset('digitalsmartagent.apk')}}"  download="Digitalsmartagent"
+                    <a href="{{ asset('digitalsmartagent.apk') }}" download="Digitalsmartagent"
                         class="btn-primary px-7 py-4 rounded-xl font-semibold inline-flex items-center gap-2">
                         <i class="fa-solid fa-download"></i> Download App
                     </a>
@@ -477,13 +478,13 @@
                     </div>
                 </div>
                 <!-- floating badges -->
-                <div class="absolute -left-6 top-20 glass rounded-2xl p-3 shadow-soft hidden md:flex items-center gap-2 floating"
+                <div class="absolute -left-6 top-16 glass rounded-2xl p-3 shadow-soft hidden md:flex items-center gap-2 floating"
                     style="animation-delay:-2s">
                     <div class="w-9 h-9 rounded-lg gradient-bg text-white flex items-center justify-center"><i
-                            class="fa-brands fa-whatsapp"></i></div>
+                            class="fa-solid fa-cloud-arrow-up"></i></div>
                     <div class="text-xs">
-                        <div class="font-bold text-primary">WhatsApp Sent</div>
-                        <div class="text-primary/60">Instant alerts</div>
+                        <div class="font-bold text-primary">DOP Portal</div>
+                        <div class="text-primary/60">Auto-sync lots</div>
                     </div>
                 </div>
                 <div class="absolute -right-6 bottom-24 glass rounded-2xl p-3 shadow-soft hidden md:flex items-center gap-2 floating"
@@ -567,8 +568,55 @@
                 </h2>
                 <p class="mt-4 text-primary/60 text-lg">Powerful tools designed specifically for collection agents.</p>
             </div>
-
-            <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">One-tap Lot Building</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Enter short codes (150, 145, 160…) and DSA auto-adds all
+                        accounts to the lot in seconds.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Direct DOP Portal Sync</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Push lots directly to the India Post DOP portal — no
+                        re-typing, no CSV, no errors.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Auto Deposit Slips</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Every synced lot generates a branded deposit slip and
+                        receipt bundle instantly.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-calculator"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Auto Commission & TDS</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Commission, TDS, rebates and default fees are calculated
+                        per lot — no manual math.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Over-limit Auto-move</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Cross the ₹20,000 lot limit? DSA auto-moves overflow into
+                        the next lot — zero effort.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-brands fa-whatsapp"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">WhatsApp Auto-updates</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Customers get receipts, reminders and monthly posting
+                        reports on WhatsApp automatically.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-users-gear"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Multi-Agent Workspace</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Onboard DOP agents & ground-floor sub-agents. Each gets
+                        their own field workspace.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-file-pdf"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">MPR & PDF Reports</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Monthly Posting Reports and daily summaries — ready to
+                        download & share, professionally branded.</p>
+                </div>
                 <!-- Feature cards -->
                 <div class="card p-7 reveal">
                     <div class="icon-wrap"><i class="fa-solid fa-users"></i></div>
@@ -617,12 +665,6 @@
                     <h3 class="font-display font-bold text-primary mt-5 text-lg">WhatsApp Notifications</h3>
                     <p class="text-primary/60 mt-2 text-sm leading-relaxed">Send instant receipts, reminders, and
                         updates to customers directly via WhatsApp.</p>
-                </div>
-                <div class="card p-7 reveal">
-                    <div class="icon-wrap"><i class="fa-solid fa-share-nodes"></i></div>
-                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Monthly Report Sharing</h3>
-                    <p class="text-primary/60 mt-2 text-sm leading-relaxed">Share complete monthly performance reports
-                        with management or stakeholders effortlessly.</p>
                 </div>
             </div>
         </div>

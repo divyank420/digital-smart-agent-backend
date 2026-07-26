@@ -10,6 +10,7 @@ use App\Models\SavingDenomination;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Helper\Helper;
+use App\Models\DopAccount;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -51,6 +52,16 @@ class DashboardController extends Controller
 
             $dashboardData['remaining_collection'] =
                 $dashboardData['expected_collection'] - $dashboardData['received_collection'];
+
+            $baseQuery = DopAccount::where('company_id', $user->company_id)
+                ->where('status', 'ACTIVE');
+
+            $dashboardData['total_active_accounts'] = (clone $baseQuery)->count();
+
+            $dashboardData['total_defaulter_accounts'] = (clone $baseQuery)
+                ->where('defaulter_installment', '>', 0)
+                ->count();
+
 
             $monthlyPaidRms = SavingRmEntries::select(
                 'rm_id',

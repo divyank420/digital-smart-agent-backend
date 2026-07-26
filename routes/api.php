@@ -9,6 +9,7 @@ use App\Http\Controllers\api\Customer\CustomerApiController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
 use App\Http\Controllers\api\CustomersController;
+use App\Http\Controllers\api\DopController;
 use App\Http\Controllers\api\ReportsController;
 use App\Http\Controllers\api\PdfReportController;
 use Illuminate\Http\Request;
@@ -72,7 +73,9 @@ Route::middleware('cors')->group(function () {
         Route::Post('upload-denomination', [ApiController::class, 'uploadDenomination']);
         Route::Post('update-denomination', [ApiController::class, 'updateDenomination']);
         Route::any('denomination-detail', [ApiController::class, 'denominationDetail']);
+        Route::any('get-denomination-detail', [ApiController::class, 'getDenominationDetail']);
         Route::any('denomination-list', [ApiController::class, 'denominationList']);
+        Route::any('denominations', [ApiController::class, 'denominationList']);
 
         Route::Post('add-expences', [ApiController::class, 'addExpences']);
         Route::Post('expenses-list', [ApiController::class, 'expencesList']);
@@ -80,6 +83,12 @@ Route::middleware('cors')->group(function () {
         Route::Post('delete-expences', [ApiController::class, 'deleteExpences']);
 
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
+
+        /* DOP Section API's */
+        Route::prefix('dop')->controller(CustomersController::class)->group(function () {
+            Route::post('dop-accounts', [DopController::class, 'getDopAccounts']);
+            Route::post('lots', [DopController::class, 'lots']);
+        });
 
         /* Bank Accounts */
         Route::prefix('bank-accounts')->group(function () {
