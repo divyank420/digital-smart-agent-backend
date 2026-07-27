@@ -86,7 +86,7 @@ Route::middleware('cors')->group(function () {
 
         /* DOP Section API's */
         Route::prefix('dop')->controller(CustomersController::class)->group(function () {
-            Route::post('dop-accounts', [DopController::class, 'getDopAccounts']);
+            Route::post('accounts', [DopController::class, 'getDopAccounts']);
             Route::post('lots', [DopController::class, 'lots']);
         });
 

@@ -79,10 +79,19 @@ class ApiController extends Controller
                     'label' => 'All Agents',
                     'value' => ''
                 ])->toArray();
-                $dop_agents = DopAgent::select('agent_name as label', 'id as value')->where('company_id',$user->company_id)->prepend([
-                    'label' => 'All Dop Agents',
-                    'value' => ''
-                ])->toArray();
+
+                $dop_agents = DopAgent::select('agent_name as label', 'id as value')
+                    ->where('company_id', $user->company_id)
+                    ->get();
+
+                if ($dop_agents->count() > 1) {
+                    $dop_agents->prepend([
+                        'label' => 'All Dop Agents',
+                        'value' => ''
+                    ]);
+                }
+
+                $dop_agents = $dop_agents->toArray();
                 $accounts = CompanyAccount::where('company_id', $user->company_id)->where('is_active', true)->get();
                 $user->agent_list = $agent_lists;
                 $user->accounts = $accounts;
@@ -214,7 +223,7 @@ class ApiController extends Controller
             $requestData = $request->all();
             $user = Auth::user();
             $requestData['company_id'] =  $user->company_id;
-            if(isset($requestData['denomination_date']) && !empty($requestData['denomination_date'])){
+            if (isset($requestData['denomination_date']) && !empty($requestData['denomination_date'])) {
                 $requestData['denomination_date'] = date('Y-m-d', strtotime($requestData['denomination_date'])) ?? date('Y-m-d');
             }
             $denominationData = SavingDenomination::where(['company_id' => $requestData['company_id']])
@@ -223,8 +232,8 @@ class ApiController extends Controller
                     $query->where('user_id', $user->id);
                 })
                 ->first();
-                
-                if (!empty($denominationData)) {
+
+            if (!empty($denominationData)) {
                 $denominationData->fill($requestData);
                 $denominationData->save();
                 sendResponse('Denomination Updated Successful', 1);
