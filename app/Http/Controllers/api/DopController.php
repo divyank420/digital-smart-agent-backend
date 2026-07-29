@@ -13,6 +13,135 @@ use Illuminate\Support\Facades\Validator;
 
 class DopController extends Controller
 {
+    public function dopDashboard(Request $request)
+    {
+        $user = Auth::user();
+        $agentId = $request->dop_agent_id;
+        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
+        $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
+
+        $nextMonthStart = Carbon::now()->addMonth()->startOfMonth()->toDateString();
+        $nextMonthEnd = Carbon::now()->addMonth()->endOfMonth()->toDateString();
+
+        $comman = "status = 'Active' OR status = 'Hold' OR status = 'Completed'";
+        $data = DopAccount::where('company_id', $user->company_id)
+            ->where('agent_id', $agentId)
+            ->selectRaw("
+                    COUNT(id) as total_accounts,
+                    COUNT(CASE WHEN {$comman} THEN 1 END) as total_portal_accounts,
+                    SUM(CASE WHEN {$comman} THEN monthly_amount ELSE 0 END) as portfolio,
+
+                    -- First Half Pending (Current Month: Start to End)
+                    COUNT(CASE WHEN status = 'Active' AND collection_cycle = '1' AND next_due_date BETWEEN ? AND ? THEN 1 END) as f_pending_acc,
+                    SUM(CASE WHEN status = 'Active' AND collection_cycle = '1' AND next_due_date BETWEEN ? AND ? THEN monthly_amount ELSE 0 END) as f_pending_amt,
+                    
+                    -- First Half Paid (Next Month: Start to End)
+                    COUNT(CASE WHEN status = 'Active' AND collection_cycle = '1' AND next_due_date BETWEEN ? AND ? THEN 1 END) as f_paid_acc,
+                    SUM(CASE WHEN status = 'Active' AND collection_cycle = '1' AND next_due_date BETWEEN ? AND ? THEN monthly_amount ELSE 0 END) as f_paid_amt,
+
+                    -- Second Half Pending (Current Month: Start to End)
+                    COUNT(CASE WHEN status = 'Active' AND collection_cycle = '2' AND next_due_date BETWEEN ? AND ? THEN 1 END) as s_pending_acc,
+                    SUM(CASE WHEN status = 'Active' AND collection_cycle = '2' AND next_due_date BETWEEN ? AND ? THEN monthly_amount ELSE 0 END) as s_pending_amt,
+                    
+                    -- Second Half Paid (Next Month: Start to End)
+                    COUNT(CASE WHEN status = 'Active' AND collection_cycle = '2' AND next_due_date BETWEEN ? AND ? THEN 1 END) as s_paid_acc,
+                    SUM(CASE WHEN status = 'Active' AND collection_cycle = '2' AND next_due_date BETWEEN ? AND ? THEN monthly_amount ELSE 0 END) as s_paid_amt,
+
+                    COUNT(CASE WHEN status = 'Active' AND defaulter_installment > 0 AND defaulter_installment > 0 THEN 1 END) as def_acc,
+                    SUM(CASE WHEN status = 'Active' AND defaulter_installment > 0 AND defaulter_installment <= 3 THEN (monthly_amount * defaulter_installment) ELSE 0 END) as def_amt,
+
+                    COUNT(CASE WHEN status = 'Active' AND defaulter_installment > 3 THEN 1 END) as freeze_acc,
+                    SUM(CASE WHEN status = 'Active' AND defaulter_installment > 3 THEN (monthly_amount * defaulter_installment) ELSE 0 END) as freeze_amt,
+
+                    COUNT(CASE WHEN status = 'Active' AND next_due_date > ? THEN 1 END) as advance_acc,
+                    SUM(CASE WHEN status = 'Active' AND next_due_date > ? THEN monthly_amount ELSE 0 END) as advance_amt,
+
+                    COUNT(CASE WHEN status = 'Active' AND account_opening_date >= ? THEN 1 END) as new_acc,
+                    SUM(CASE WHEN status = 'Active' AND account_opening_date >= ? THEN monthly_amount ELSE 0 END) as new_amt,
+                    
+                    COUNT(CASE WHEN status = 'Active' THEN 1 END) as status_active,
+                    COUNT(CASE WHEN status = 'Hold' THEN 1 END) as status_hold,
+                    COUNT(CASE WHEN status = 'Completed' THEN 1 END) as status_completed,
+                    COUNT(CASE WHEN status = 'Matured' THEN 1 END) as status_matured,
+                    COUNT(CASE WHEN status = 'Pre-Matured' THEN 1 END) as status_prematured
+                ", [
+                // f_pending (Current Month)
+                $startOfMonth,
+                $endOfMonth,
+                $startOfMonth,
+                $endOfMonth,
+
+                // f_paid (Next Month)
+                $nextMonthStart,
+                $nextMonthEnd,
+                $nextMonthStart,
+                $nextMonthEnd,
+
+                // s_pending (Current Month)
+                $startOfMonth,
+                $endOfMonth,
+                $startOfMonth,
+                $endOfMonth,
+
+                // s_paid (Next Month)
+                $nextMonthStart,
+                $nextMonthEnd,
+                $nextMonthStart,
+                $nextMonthEnd,
+
+                // advance_acc & advance_amt (> Next Month End or > Current Month End depending on logic, keeping your reference boundary)
+                $nextMonthEnd,
+                $nextMonthEnd,
+
+                // new_acc & new_amt
+                $startOfMonth,
+                $startOfMonth
+            ])
+            ->first();
+
+        $data =  [
+            'totalAccounts' => number_format($data->total_portal_accounts ?? 0),
+            'portfolio' => (int)$data->portfolio ?? 0,
+            'firstHalf' => [
+                'pendingAccount' => (string) ($data->f_pending_acc ?? 0),
+                'pendingAmount' => (int)$data->f_pending_amt ?? 0,
+                'paidAccount' => (string) ($data->f_paid_acc ?? 0),
+                'paidAmount' => (int)$data->f_paid_amt ?? 0,
+            ],
+            'secondHalf' => [
+                'pendingAccount' => (string) ($data->s_pending_acc ?? 0),
+                'pendingAmount' => (int)$data->s_pending_amt ?? 0,
+                'paidAccount' => (string) ($data->s_paid_acc ?? 0),
+                'paidAmount' => (int)$data->s_paid_amt ?? 0,
+            ],
+            'defaulter' => [
+                'account' => (string) ($data->def_acc ?? 0),
+                'amount' => (int)$data->def_amt ?? 0,
+            ],
+            'freeze' => [
+                'account' => (string) ($data->freeze_acc ?? 0),
+                'amount' => (int)$data->freeze_amt ?? 0,
+            ],
+            'advancePaid' => [
+                'account' => (string) ($data->advance_acc ?? 0),
+                'amount' => (int)$data->advance_amt ?? 0,
+            ],
+            'newAccounts' => [
+                'account' => (string) ($data->new_acc ?? 0),
+                'amount' => (int)$data->new_amt ?? 0,
+            ],
+            'statusCounts' => [
+                'active' => (string) ($data->status_active ?? 0),
+                'hold' => (string) ($data->status_hold ?? 0),
+                'completed' => (string) ($data->status_completed ?? 0),
+                'matured' => (string) ($data->status_matured ?? 0),
+                'preMatured' => (string) ($data->status_prematured ?? 0),
+            ],
+        ];
+
+        Helper::sendResponse('Dop Dashboard Data', 1, $data);
+    }
+
     public function getDopAccounts(Request $request)
     {
 
@@ -87,7 +216,7 @@ class DopController extends Controller
 
             return Helper::sendResponse('Accounts List', 1, $data);
         } else {
-            $accounts = $accountsQuery->get();
+            $accounts = $accountsQuery->paginate(10);
             return Helper::sendResponse('Accounts List', 1, [
                 'accounts' => $accounts,
                 'stats' => $statsData

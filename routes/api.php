@@ -85,9 +85,10 @@ Route::middleware('cors')->group(function () {
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
 
         /* DOP Section API's */
-        Route::prefix('dop')->controller(CustomersController::class)->group(function () {
-            Route::post('accounts', [DopController::class, 'getDopAccounts']);
-            Route::post('lots', [DopController::class, 'lots']);
+        Route::prefix('dop')->controller(DopController::class)->group(function () {
+            Route::post('dashboard',  'dopDashboard');
+            Route::post('accounts',  'getDopAccounts');
+            Route::post('lots',  'lots');
         });
 
         /* Bank Accounts */
