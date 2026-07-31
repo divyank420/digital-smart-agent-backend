@@ -59,7 +59,7 @@ class DopController extends Controller
                     COUNT(CASE WHEN status = 'Active' AND account_opening_date >= ? THEN 1 END) as new_acc,
                     SUM(CASE WHEN status = 'Active' AND account_opening_date >= ? THEN monthly_amount ELSE 0 END) as new_amt,
                     
-                    COUNT(CASE WHEN status = 'Active' THEN 1 END) as status_active,
+                    COUNT(CASE WHEN {$comman} THEN 1 END) as status_active,
                     COUNT(CASE WHEN status = 'Hold' THEN 1 END) as status_hold,
                     COUNT(CASE WHEN status = 'Completed' THEN 1 END) as status_completed,
                     COUNT(CASE WHEN status = 'Matured' THEN 1 END) as status_matured,
@@ -157,18 +157,8 @@ class DopController extends Controller
 
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
         $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
-
-        $stats = $statsQuery->selectRaw("
-            COUNT(CASE WHEN last_deposit_date NOT BETWEEN ? AND ? THEN 1 END) as total_pending,
-            COUNT(CASE WHEN status = 'ACTIVE' AND defaulter_installment > 0 THEN 1 END) as total_defaulter_accounts,
-            COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as total_active_accounts
-        ", [$startOfMonth, $endOfMonth])->first();
-
-        $statsData = [
-            'total_pending' => $stats->total_pending ?? 0,
-            'total_defaulter_accounts' => $stats->total_defaulter_accounts ?? 0,
-            'total_active_accounts' => $stats->total_active_accounts ?? 0,
-        ];
+        $nextMonthStart = Carbon::now()->addMonth()->startOfMonth()->toDateString();
+        $nextMonthEnd = Carbon::now()->addMonth()->endOfMonth()->toDateString();
 
         // Main Accounts Query
         $accountsQuery = DopAccount::where('company_id', $user->company_id)
@@ -187,11 +177,12 @@ class DopController extends Controller
             ->when(data_get($filter, 'selectedFilter') === 'defaulter', function ($query) {
                 $query->where('defaulter_installment', '>', 0);
             })
-            ->when(data_get($filter, 'selectedFilter') === 'pending', function ($query) {
-                $query->where('remaining_installments', '>', 0);
+            ->when(data_get($filter, 'selectedFilter') === 'near-to-hold', function ($query) {
+                $query->where('defaulter_installment', '>', 3);
             })
-            ->when(data_get($filter, 'selectedFilter') === 'paid', function ($query) {
-                $query->where('remaining_installments', '<=', 0);
+            ->when(data_get($filter, 'selectedFilter') === 'advance-paid', function ($query) use ($nextMonthEnd) {
+                $query->where('status', 'Active')
+                    ->where('next_due_date', '>', $nextMonthEnd);
             })
             ->when(data_get($filter, 'selectedFilter') === 'newly_added', function ($query) {
                 $query->whereBetween('account_opening_date', [
@@ -199,11 +190,43 @@ class DopController extends Controller
                     Carbon::now()->endOfMonth(),
                 ]);
             })
-            ->when(data_get($filter, 'dropdownFilter') === 'near_maturity', function ($query) {
+            ->when(data_get($filter, 'selectedFilter') === 'f_pending', function ($query) use ($startOfMonth, $endOfMonth) {
+                $query->where('status', 'Active')
+                    ->where('collection_cycle', '1')
+                    ->whereBetween('next_due_date', [$startOfMonth, $endOfMonth]);
+            })
+            ->when(data_get($filter, 'selectedFilter') === 'f_paid', function ($query) use ($nextMonthStart, $nextMonthEnd) {
+                $query->where('status', 'Active')
+                    ->where('collection_cycle', '1')
+                    ->whereBetween('next_due_date', [$nextMonthStart, $nextMonthEnd]);
+            })
+            ->when(data_get($filter, 'selectedFilter') === 's_pending', function ($query) use ($startOfMonth, $endOfMonth) {
+                $query->where('status', 'Active')
+                    ->where('collection_cycle', '2')
+                    ->whereBetween('next_due_date', [$startOfMonth, $endOfMonth]);
+            })
+            ->when(data_get($filter, 'selectedFilter') === 's_paid', function ($query) use ($nextMonthStart, $nextMonthEnd) {
+                $query->where('status', 'Active')
+                    ->where('collection_cycle', '2')
+                    ->whereBetween('next_due_date', [$nextMonthStart, $nextMonthEnd]);
+            })
+            ->when(data_get($filter, 'selectedFilter') === 'near_maturity', function ($query) {
                 $query->whereBetween('maturity_date', [
                     today(),
                     today()->addMonths(3)
-                ])->where('status', 'ACTIVE');
+                ])->where('status', 'Active');
+            })
+            ->when(data_get($filter, 'selectedFilter') === 'hold', function ($query) {
+                $query->where('status', 'Hold');
+            })
+            ->when(data_get($filter, 'selectedFilter') === 'completed', function ($query) {
+                $query->where('status', 'Completed');
+            })
+            ->when(data_get($filter, 'selectedFilter') === 'pre-matured', function ($query) {
+                $query->where('status', 'Pre-Matured');
+            })
+            ->when(data_get($filter, 'selectedFilter') === 'matured', function ($query) {
+                $query->where('status', 'Matured');
             });
 
         if ($request->type == 'list') {
@@ -217,10 +240,7 @@ class DopController extends Controller
             return Helper::sendResponse('Accounts List', 1, $data);
         } else {
             $accounts = $accountsQuery->paginate(10);
-            return Helper::sendResponse('Accounts List', 1, [
-                'accounts' => $accounts,
-                'stats' => $statsData
-            ]);
+            return Helper::sendResponse('Accounts List', 1, $accounts);
         }
     }
 
