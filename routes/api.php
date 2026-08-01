@@ -72,6 +72,7 @@ Route::middleware('cors')->group(function () {
 
         Route::Post('upload-denomination', [ApiController::class, 'uploadDenomination']);
         Route::Post('update-denomination', [ApiController::class, 'updateDenomination']);
+        Route::Post('delete-denomination', [ApiController::class, 'DeleteDenomination']);
         Route::any('denomination-detail', [ApiController::class, 'denominationDetail']);
         Route::any('get-denomination-detail', [ApiController::class, 'getDenominationDetail']);
         Route::any('denomination-list', [ApiController::class, 'denominationList']);

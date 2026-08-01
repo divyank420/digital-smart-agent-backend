@@ -244,16 +244,27 @@ class ApiController extends Controller
             sendResponse('Something went wrong');
         }
     }
+    public function deleteDenomination(Request $request)
+    {
+        $user = Auth::user();
+        $denomination = SavingDenomination::where('id', $request->denomination_id)->first();
+        if (!$denomination) {
+            return Helper::sendResponse('Denomination not found', 0);
+        }
+        $denomination->delete();
+        return Helper::sendResponse('Denomination Successfully Deleted', 1);
+    }
 
     public function denominationList(Request $request)
     {
         $user = Auth::user();
         $companyId = $user->company_id;
         $denominationList = SavingDenomination::where('company_id', $companyId)
-            ->whereDate('denomination_date', '>' ,date('Y-m-d',strtotime('-40 days')))
+            ->whereDate('denomination_date', '>', date('Y-m-d', strtotime('-40 days')))
             ->when($user->role != 'Developer', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
+            ->orderBy('denomination_date', 'DESC')
             ->get()
             ->map(function ($item) {
                 $breakdown = [];
