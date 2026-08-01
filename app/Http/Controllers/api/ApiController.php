@@ -259,43 +259,50 @@ class ApiController extends Controller
     {
         $user = Auth::user();
         $companyId = $user->company_id;
+        $month = $request->month ?? date('m');
+        $year = $request->year ?? date('Y');
         $denominationList = SavingDenomination::where('company_id', $companyId)
-            ->whereDate('denomination_date', '>', date('Y-m-d', strtotime('-40 days')))
+            ->whereMonth('denomination_date', $month)
+            ->whereYear('denomination_date', $year)
             ->when($user->role != 'Developer', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
             ->orderBy('denomination_date', 'DESC')
-            ->get()
-            ->map(function ($item) {
-                $breakdown = [];
-                $notes = [2000, 500, 200, 100, 50, 20, 10];
+            ->get();
+        $dates = $denominationList->pluck('denomination_date')->unique();
 
-                foreach ($notes as $note) {
-                    $column = "n_{$note}";
-                    if (!is_null($item->$column)) {
-                        $breakdown[$note] = (int)$item->$column;
-                    }
+        $expenseTotalsByDate = SavingExpenses::where('company_id', $companyId)
+            ->whereIn('expenses_date', $dates)
+            ->select('expenses_date', DB::raw('SUM(amount) as total_expense'))
+            ->groupBy('expenses_date')
+            ->pluck('total_expense', 'expenses_date');
+
+        $formattedDenominationList = $denominationList->map(function ($item) use ($expenseTotalsByDate) {
+            $breakdown = [];
+            $notes = [2000, 500, 200, 100, 50, 20, 10];
+
+            foreach ($notes as $note) {
+                $column = "n_{$note}";
+                if (!is_null($item->$column)) {
+                    $breakdown[$note] = (int)$item->$column;
                 }
+            }
 
-                return [
-                    'id' => $item->id,
-                    'company_id' => $item->company_id,
-                    'user_id' => $item->user_id,
-                    'online' => $item->online,
-                    'type' => $item->type,
-                    'total' => $item->total,
-                    'denomination_date' => $item->denomination_date,
-                    'breakdown' => $breakdown,
-                ];
-            });
-        sendResponse('Denomination List', 1, $denominationList);
+            return [
+                'id' => $item->id,
+                'company_id' => $item->company_id,
+                'user_id' => $item->user_id,
+                'online' => $item->online,
+                'type' => $item->type,
+                'total' => $item->total,
+                'denomination_date' => $item->denomination_date,
+                'breakdown' => $breakdown,
+                'expense_total' => (float)($expenseTotalsByDate->get($item->denomination_date, 0)), // Total sum for that date
+            ];
+        });
+        Helper::sendResponse('Denomination List', 1, $formattedDenominationList);
     }
-    public function getDenominationDetail(Request $request)
-    {
-        $user = Auth::user();
-        $data = SavingDenomination::where('company_id', $user->company_id)->where('id', $request->id)->first();
-        sendResponse('Denomination Detai;', 1, $data);
-    }
+
     public function denominationDetail(Request $request)
     {
 
@@ -329,7 +336,7 @@ class ApiController extends Controller
             ->where('company_id', $user->company_id)
             ->whereDate('denomination_date', date('Y-m-d', strtotime($selectedDate)));
 
-        $expenses = SavingExpenses::where(['company_id' => $user->company_id, 'expenses_type' => 'Others'])->whereDate('created_at', date('Y-m-d', strtotime($selectedDate)));;
+        $expenses = SavingExpenses::where(['company_id' => $user->company_id, 'expenses_type' => 'Others'])->whereDate('created_at', date('Y-m-d', strtotime($selectedDate)));
 
 
         if ($request->fetch_type == 'edit' || $user->role != 'Developer' && (isset($request->fetch_type) && $request->fetch_type != 'report')) {

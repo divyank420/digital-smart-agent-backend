@@ -50,7 +50,7 @@ class RmController extends Controller
             }
 
             $user = Auth::user();
-            $name = ucwords(trim($request->name,''));
+            $name = ucwords(trim($request->name, ''));
             $existRm = SavingRm::where([
                 'name' => $name,
                 'company_id' => $user->company_id,
@@ -76,9 +76,8 @@ class RmController extends Controller
                 $rmData->save();
                 $message = 'RM Successfully Added';
                 $status = 1;
-            }else{
+            } else {
                 $message = "RM already exist";
-
             }
 
             DB::commit();
@@ -102,6 +101,7 @@ class RmController extends Controller
         if (!empty($rmData)) {
             Helper::sendResponse("Rm Detail", 1, $rmData);
         }
+        Helper::sendResponse("No Rm Found",0);
     }
 
     public function editRm(Request $request)
@@ -296,9 +296,9 @@ class RmController extends Controller
             $totalTrashedAmount = $rmEntries->clone()->whereNotNull('deleted_at')->sum('amount');
             $rmEntries = $rmEntries->orderBy('entry_date', 'DESC')->get()->map->formatData()->toArray();
             if (!empty($rmEntries)) {
-                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount,'total_trashed_amount'=>$totalTrashedAmount]);
+                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount, 'total_trashed_amount' => $totalTrashedAmount]);
             } else {
-                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount,'total_trashed_amount'=>$totalTrashedAmount]);
+                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount, 'total_trashed_amount' => $totalTrashedAmount]);
             }
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());
