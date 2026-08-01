@@ -249,10 +249,8 @@ class ApiController extends Controller
     {
         $user = Auth::user();
         $companyId = $user->company_id;
-
         $denominationList = SavingDenomination::where('company_id', $companyId)
-            ->whereMonth('denomination_date', date('m') - 1)
-            ->whereYear('denomination_date', date('Y'))
+            ->whereDate('denomination_date', '>' ,date('Y-m-d',strtotime('-40 days')))
             ->when($user->role != 'Developer', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
             })
