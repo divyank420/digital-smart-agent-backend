@@ -234,6 +234,7 @@ class ApiController extends Controller
                 ->first();
 
             if (!empty($denominationData)) {
+                unset($requestData['user_id']);
                 $denominationData->fill($requestData);
                 $denominationData->save();
                 sendResponse('Denomination Updated Successful', 1);
