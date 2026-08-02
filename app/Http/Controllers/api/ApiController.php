@@ -179,9 +179,7 @@ class ApiController extends Controller
             $requestData['company_id'] =  $user->company_id;
             $requestData['denomination_date'] = date('Y-m-d', strtotime($requestData['denomination_date'])) ?? date('Y-m-d');
             $checkAlreadyAddedDenomination = SavingDenomination::where(['company_id' => $requestData['company_id']]);
-            if ($requestData['user_id'] != '1') {
-                $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('user_id', $requestData['user_id']);
-            }
+            $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('user_id', $requestData['user_id']);
 
             if (isset($requestData['id']) && !empty($requestData['id'])) {
                 $checkAlreadyAddedDenomination = $checkAlreadyAddedDenomination->where('id', $requestData['id']);
@@ -195,7 +193,6 @@ class ApiController extends Controller
                     if ($checkAlreadyAddedDenomination->upload_type == 'edit') {
                         $checkAlreadyAddedDenomination->fill($requestData);
                     } else {
-                        $checkAlreadyAddedDenomination->n_2000 += $requestData['n_2000'];
                         $checkAlreadyAddedDenomination->n_500 += $requestData['n_500'];
                         $checkAlreadyAddedDenomination->n_200 += $requestData['n_200'];
                         $checkAlreadyAddedDenomination->n_100 += $requestData['n_100'];
@@ -204,6 +201,7 @@ class ApiController extends Controller
                         $checkAlreadyAddedDenomination->n_10 += $requestData['n_10'];
                         $checkAlreadyAddedDenomination->online += $requestData['online'];
                     }
+                    //dd($checkAlreadyAddedDenomination);
                     $checkAlreadyAddedDenomination->save();
                 } else {
                     sendResponse("You cannot update this denomination", 0);
