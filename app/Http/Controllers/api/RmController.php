@@ -351,7 +351,7 @@ class RmController extends Controller
                 ->where('saving_rm_entries.payment_month', '=', date('m'))
                 ->where('saving_rm_entries.payment_year', '=', date('Y'));
         })
-            ->select('saving_rm_entries.rm_id', 'saving_rms.name', 'saving_rm_entries.amount', 'monthly_amount', 'rm_code', DB::raw('CAST(COALESCE(SUM(saving_rm_entries.amount), 0) AS INT) as total_amount'))
+            ->select('saving_rms.id as id','saving_rm_entries.rm_id', 'saving_rms.name', 'saving_rm_entries.amount', 'monthly_amount', 'rm_code', DB::raw('CAST(COALESCE(SUM(saving_rm_entries.amount), 0) AS INT) as total_amount'))
             ->where('saving_rms.monthly_amount', '>', 0);
         if (!empty($search)) {
             $entry = $entry->where('saving_rms.name', 'LIKE', '%' . $search . '%');

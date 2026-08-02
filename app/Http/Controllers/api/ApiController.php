@@ -273,6 +273,7 @@ class ApiController extends Controller
 
         $expenseTotalsByDate = SavingExpenses::where('company_id', $companyId)
             ->whereIn('expenses_date', $dates)
+            ->where('expenses_type', 'Others')
             ->select('expenses_date', DB::raw('SUM(amount) as total_expense'))
             ->groupBy('expenses_date')
             ->pluck('total_expense', 'expenses_date');
@@ -435,8 +436,8 @@ class ApiController extends Controller
             $requestData = $request->all();
             $requestData['company_id'] = Auth::user()->company_id;
             $requestData['expenses_date'] = date('Y-m-d', strtotime($request->expenses_date));
-
             $expense = SavingExpenses::findOrFail($request->id);
+            unset($requestData['user_id']);
             $expense->fill($requestData);
             $expense->save();
             return sendResponse("Expenses Successfully Updated", 1);

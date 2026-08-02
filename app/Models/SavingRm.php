@@ -125,7 +125,6 @@ class SavingRm extends Model
     private function resolveAmountFromHistory($field, $defaultValue)
     {
         $now = now();
-
         $history = $this->monthlyAmountHistory
             ->filter(function ($row) use ($now) {
 
