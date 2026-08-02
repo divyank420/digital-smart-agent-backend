@@ -101,7 +101,7 @@ class RmController extends Controller
         if (!empty($rmData)) {
             Helper::sendResponse("Rm Detail", 1, $rmData);
         }
-        Helper::sendResponse("No Rm Found",0);
+        Helper::sendResponse("No Rm Found", 0);
     }
 
     public function editRm(Request $request)
@@ -340,35 +340,75 @@ class RmController extends Controller
         $limit = 15;
         $skip = 0;
         $search = '';
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+
         if (isset($request->page) && !empty($request->page)) {
             $skip = $limit * ($request->page - 1);
         }
         if (isset($request->search) && !empty($request->search)) {
             $search = $request->search;
         }
-        $entry = SavingRm::leftJoin('saving_rm_entries', function ($join) {
+        $totalRmQuery = SavingRm::where('monthly_amount', '>', 0)
+            ->where(function ($q) use ($month, $year) {
+                $q->where('saving_rms.opening_year', '<', $year)
+                    ->orWhere(function ($subQ) use ($month, $year) {
+                        $subQ->where('saving_rms.opening_year', '=', $year)
+                            ->where('saving_rms.opening_month', '<=', $month);
+                    })
+                    ->orWhereNull('saving_rms.opening_year');
+            })
+            ->when(!empty($search), function ($q) use ($search) {
+                return $q->where('saving_rms.name', 'LIKE', '%' . $search . '%');
+            });
+
+        $totalRm = $totalRmQuery->count();
+        $query = SavingRm::leftJoin('saving_rm_entries', function ($join) use ($month, $year) {
             $join->on('saving_rm_entries.rm_id', '=', 'saving_rms.id')
-                ->where('saving_rm_entries.payment_month', '=', date('m'))
-                ->where('saving_rm_entries.payment_year', '=', date('Y'));
+                ->where('saving_rm_entries.payment_month', '=', $month)
+                ->where('saving_rm_entries.payment_year', '=', $year)
+                ->whereNull('saving_rm_entries.deleted_at');
         })
-            ->select('saving_rms.id as id','saving_rm_entries.rm_id', 'saving_rms.name', 'saving_rm_entries.amount', 'monthly_amount', 'rm_code', DB::raw('CAST(COALESCE(SUM(saving_rm_entries.amount), 0) AS INT) as total_amount'))
-            ->where('saving_rms.monthly_amount', '>', 0);
-        if (!empty($search)) {
-            $entry = $entry->where('saving_rms.name', 'LIKE', '%' . $search . '%');
-        }
-        $entry = $entry->groupBy('saving_rms.id')
+            ->select(
+                'saving_rms.id as id',
+                'saving_rms.name',
+                'saving_rms.monthly_amount',
+                'saving_rms.rm_code',
+                DB::raw('CAST(COALESCE(SUM(saving_rm_entries.amount), 0) AS INT) as total_amount')
+            )
+            ->where('saving_rms.monthly_amount', '>', 0)
+            ->where(function ($q) use ($month, $year) {
+                $q->where('saving_rms.opening_year', '<', $year)
+                    ->orWhere(function ($subQ) use ($month, $year) {
+                        $subQ->where('saving_rms.opening_year', '=', $year)
+                            ->where('saving_rms.opening_month', '<=', $month);
+                    })
+                    ->orWhereNull('saving_rms.opening_year');
+            })
+            ->when(!empty($search), function ($q) use ($search) {
+                return $q->where('saving_rms.name', 'LIKE', '%' . $search . '%');
+            })
+            ->groupBy('saving_rms.id', 'saving_rms.name', 'saving_rms.monthly_amount', 'saving_rms.rm_code')
             ->havingRaw('COALESCE(SUM(saving_rm_entries.amount), 0) < saving_rms.monthly_amount')
             ->orderBy('saving_rms.name', 'asc');
 
-        $totalRecord = $entry->sum('total_amount');
-        $totalPage = $totalRecord / $limit;
-        $totalPage = ($totalPage) > 0 ? $totalPage : 1;
-        $entry = $entry->take($limit)->skip($skip)->get();
+        $totalRecord = DB::query()->fromSub($query->toBase(), 'filtered_pending')->count();
+        $totalPage = ceil($totalRecord / $limit);
+        $totalPage = $totalPage > 0 ? $totalPage : 1;
+
+        $entry = $query->take($limit)->skip($skip)->get();
+
         if ($entry->count() > 0) {
-            sendResponse('Pending Records', 1, $entry, ['total_record' => $totalRecord, 'total_page' => $totalPage]);
-            //sendResponse('Pending Records',1, $entry,['total_record'=>$totalRecord,'total_page'=>5]);
+            return Helper::SendResponse('Pending Records', 1, $entry, [
+                'total_rms' => $totalRm,
+                'total_record' => $totalRecord,
+                'total_page' => (int)$totalPage
+            ]);
         }
-        sendResponse('No Data Found');
+        if ($entry->count() > 0) {
+            return Helper::sendResponse('Pending Records', 1, $entry, ['total_record' => $totalRecord, 'total_page' => $totalPage]);
+        }
+        return Helper::SendResponse('No Data Found');
     }
 
     public function rmYearlySummary(Request $request)

@@ -259,8 +259,8 @@ class ApiController extends Controller
     {
         $user = Auth::user();
         $companyId = $user->company_id;
-        $month = $request->month ?? date('m');
-        $year = $request->year ?? date('Y');
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
         $denominationList = SavingDenomination::where('company_id', $companyId)
             ->whereMonth('denomination_date', $month)
             ->whereYear('denomination_date', $year)
@@ -270,15 +270,20 @@ class ApiController extends Controller
             ->orderBy('denomination_date', 'DESC')
             ->get();
         $dates = $denominationList->pluck('denomination_date')->unique();
+        $userIds = $denominationList->pluck('user_id')->unique();
 
-        $expenseTotalsByDate = SavingExpenses::where('company_id', $companyId)
+        $expenseTotals = SavingExpenses::where('company_id', $companyId)
             ->whereIn('expenses_date', $dates)
+            ->whereIn('user_id', $userIds)
             ->where('expenses_type', 'Others')
-            ->select('expenses_date', DB::raw('SUM(amount) as total_expense'))
-            ->groupBy('expenses_date')
-            ->pluck('total_expense', 'expenses_date');
+            ->select('expenses_date', 'user_id', DB::raw('SUM(amount) as total_expense'))
+            ->groupBy('expenses_date', 'user_id')
+            ->get();
+        $expenseTotalsMap = $expenseTotals->mapWithKeys(function ($item) {
+            return ["{$item->expenses_date}_{$item->user_id}" => (float)$item->total_expense];
+        });
 
-        $formattedDenominationList = $denominationList->map(function ($item) use ($expenseTotalsByDate) {
+        $formattedDenominationList = $denominationList->map(function ($item) use ($expenseTotalsMap) {
             $breakdown = [];
             $notes = [2000, 500, 200, 100, 50, 20, 10];
 
@@ -289,6 +294,8 @@ class ApiController extends Controller
                 }
             }
 
+            $expenseKey = "{$item->denomination_date}_{$item->user_id}";
+
             return [
                 'id' => $item->id,
                 'company_id' => $item->company_id,
@@ -298,10 +305,17 @@ class ApiController extends Controller
                 'total' => $item->total,
                 'denomination_date' => $item->denomination_date,
                 'breakdown' => $breakdown,
-                'expense_total' => (float)($expenseTotalsByDate->get($item->denomination_date, 0)), // Total sum for that date
+                'expense_total' => $expenseTotalsMap->get($expenseKey, 0.0), // Specific to date and user_id
             ];
         });
         Helper::sendResponse('Denomination List', 1, $formattedDenominationList);
+    }
+
+    public function getDenominationDetail(Request $request)
+    {
+        $user = Auth::user();
+        $data = SavingDenomination::where('company_id', $user->company_id)->where('id', $request->id)->first();
+        sendResponse('Denomination Detai;', 1, $data);
     }
 
     public function denominationDetail(Request $request)
