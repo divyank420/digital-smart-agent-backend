@@ -21,40 +21,27 @@ class RmController extends Controller
     public function newRm(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'customer_id'        => 'required',
             'name'               => 'required',
-            'mobile'             => 'required|digits:10',
             'account_type'       => 'required',
             'monthly_amount'     => 'required|integer',
             'installment_amount' => 'required|integer',
+            'opening_month'     => 'required|integer',
+            'opening_year' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
             return Helper::sendResponse(Helper::ValidationSet($validator->errors()), 422);
         }
-
         DB::beginTransaction();
 
         try {
-            $customer = SavingCustomer::firstOrCreate(
-                ['mobile' => $request->mobile],
-                [
-                    'name'     => $request->name,
-                    'email'    => $request->email,
-                    'password' => Hash::make('user@123'),
-                ]
-            );
-
-            if ($customer->wasRecentlyCreated) {
-                $customer->rm_code = 'RM' . str_pad($customer->id, 6, "0", STR_PAD_LEFT);
-                $customer->save();
-            }
-
             $user = Auth::user();
             $name = ucwords(trim($request->name, ''));
             $existRm = SavingRm::where([
                 'name' => $name,
                 'company_id' => $user->company_id,
-                'customer_id'        => $request->customer_id,
+                'customer_id' => $request->customer_id,
             ])->first();
 
             $status = 0;
@@ -62,7 +49,6 @@ class RmController extends Controller
                 $rmData = SavingRm::create([
                     'name'               => $name,
                     'company_id'         => $user->company_id,
-                    'agent_id'           => $user->id,
                     'customer_id'        => $request->customer_id,
                     'account_type'       => $request->account_type,
                     'monthly_amount'     => $request->monthly_amount,
@@ -70,6 +56,7 @@ class RmController extends Controller
                     'opening_month'      => $request->opening_month ?? date('m'),
                     'opening_year'       => $request->opening_year ?? date('Y'),
                     'opening_balance'    => $request->opening_balance ?? 0,
+                    'status'             => 1
                 ]);
 
                 $rmData->rm_code = 'RM-' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
@@ -107,11 +94,13 @@ class RmController extends Controller
     public function editRm(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'customer_id' => 'required|integer',
             'rm_id' => 'required|integer',
             'name' => 'required',
+            'opening_month' => 'required|integer',
+            'opening_year' => 'required|integer',
             'account_type' => 'required',
         ]);
+
         if ($validator->fails()) {
             $error = Helper::ValidationSet($validator->errors());
         }
@@ -120,28 +109,14 @@ class RmController extends Controller
 
         $rmData = SavingRm::find($request->rm_id);
 
-        // $customer = SavingCustomer::where('mobile', $request->mobile)->first();
-        // if (!empty($customer)) {
-        //     $rmData->customer_id = $customer->id;
-        // } else {
-        //     $customer = SavingCustomer::find($request->customer_id);
-        //     if ($customer->mobile != '') {
-        //         $customer->mobile = $request->mobile;
-        //     }
-        //     if ($customer->email != '') {
-        //         $customer->email = $request->email;
-        //     }
-        //     $customer->save();
-        // }
+        // $rmData->name = $request->name;
+        // $rmData->customer_id = $request->customer_id;
+        // $rmData->account_type = $request->account_type;
+        // $rmData->opening_balance = $request->opening_balance;
+        // $rmData->opening_month = $request->opening_month;
+        // $rmData->opening_year = $request->opening_year;
 
-        $rmData->name = $request->name;
-        $rmData->customer_id = $request->customer_id;
-        $rmData->account_type = $request->account_type;
-        $rmData->opening_balance = $request->opening_balance;
-        $rmData->opening_month = $request->opening_month;
-        $rmData->opening_year = $request->opening_year;
-
-
+        $rmData->fill($request->all());
         if ($rmData->save()) {
             Helper::sendResponse("Update rm detail Successfully", 1);
         }
