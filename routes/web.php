@@ -6,6 +6,7 @@ use App\Http\Controllers\Agent\AgentDashboardController;
 use App\Http\Controllers\Agent\EntriesController;
 use App\Http\Controllers\Agent\DenominationController;
 use App\Http\Controllers\api\PdfReportController;
+use App\Mail\OtpMail;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -32,12 +33,26 @@ Route::get('/rms-code', function () {
 
 Route::get('/send-mail', function () {
     $data = array('name' => "Virat Gandhi");
-    Mail::send([], [], function ($message) {
-        $message->to('khatod.anilji@gmail.com', 'Khatod RD Collection')
-            ->subject('Daily Collection Record');
-        //$message->to('divyank.kabra@bacancy.com', 'Khatod RD Collection')
-        $message->from('support@digitalsmartagent.com', 'DSA Support Team');
-    });
+    try {
+        // Mail::raw('This is a test email from Laravel.', function ($message) {
+        //     $message->to('divyank@mailinator.com')
+        //             ->subject('Laravel Gmail Test');
+        // });
+        Mail::to('divyank@mailinator.com')->send(
+            new OtpMail(
+                name: 'Virat Gandhi',
+                otp: '458721'
+            )
+        );
+    } catch (\Throwable $th) {
+        dd($th->getMessage());
+    }
+    // Mail::send([], [], function ($message) {
+    //     $message->to('divyank@mailinator.com', 'Khatod RD Collection')
+    //         ->subject('Daily Collection Record');
+    //     //$message->to('divyank.kabra@bacancy.com', 'Khatod RD Collection')
+    //     $message->from('support@digitalsmartagent.com', 'DSA Support Team');
+    // });
     echo "Basic Email Sent. Check your inbox.";
 });
 

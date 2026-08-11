@@ -104,9 +104,7 @@ class RmController extends Controller
         if ($validator->fails()) {
             $error = Helper::ValidationSet($validator->errors());
         }
-
         /* Customer Detail Save */
-
         $rmData = SavingRm::find($request->rm_id);
 
         // $rmData->name = $request->name;
