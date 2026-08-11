@@ -27,7 +27,7 @@ class SavingRmEntries extends Model
      */
     public function RmDetail()
     {
-        return $this->belongsTo(SavingRm::class, 'rm_id', 'id')->select(['id', 'name', 'account_type', 'monthly_amount', 'rm_code']);
+        return $this->belongsTo(SavingRm::class, 'rm_id', 'id')->withTrashed()->select(['id', 'name', 'account_type', 'monthly_amount', 'rm_code']);
     }
     public function company()
     {

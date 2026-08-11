@@ -201,9 +201,9 @@
                 <div class="receipt-header receipt-header-mid">
                     <div class="col-xs-8 col-sm-8 col-md-8 text-left" style="display: inline-block;">
                         <div class="receipt-right">
-                            <h5>{{$company->firm_name}}</h5>
-                            <p><b>Agent :</b> {{$company->agent_name}}</p>
-                            <p><b>Email :</b> {{$company->email}}</p>
+                            <h5>{{$company->company_name}}</h5>
+                            <p><b>Agent :</b> {{$company->owner_name}}</p>
+                            <p><b>Email :</b> {{$company->email ?? ''}}</p>
                             <p><b>Mobile :</b> 9352244561</p>
                         </div>
                     </div>
