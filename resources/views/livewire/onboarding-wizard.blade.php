@@ -1,7 +1,6 @@
 <div class="modal-panel p-5 sm:p-7 md:p-9">
     <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-            <div class="text-[10px] font-bold uppercase tracking-[.2em] text-accent">Get Started</div>
             <h3 class="font-display font-extrabold text-xl sm:text-2xl text-primary mt-1">Onboarding Request</h3>
             <p class="text-primary/60 text-xs sm:text-sm mt-1">Tell us about your firm and we'll set up your account.
             </p>

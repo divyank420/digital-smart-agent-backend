@@ -58,8 +58,6 @@
     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-4">
         <button onclick="closeRequestModal()"
             class="px-5 py-3 rounded-xl text-sm font-semibold text-primary bg-slate-100 hover:bg-slate-200">Cancel</button>
-        <button wire:click="goToStep(3)"
-            class="px-5 py-3 rounded-xl text-sm font-semibold text-primary bg-slate-100 hover:bg-slate-200">3</button>
         <button wire:click="submitStepOne" wire:loading.attr="disabled"
             class="btn-primary px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2">
             <span wire:loading.remove wire:target="submitStepOne" >
