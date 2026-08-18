@@ -133,11 +133,10 @@ class Helper
             ->select(
                 'rm_id',
                 DB::raw('SUM(amount) as total_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = ? AND payment_year = ? THEN amount ELSE 0 END) as last_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = ? AND payment_year = ? THEN amount ELSE 0 END) as current_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = ? AND payment_year = ? THEN amount ELSE 0 END) as next_month_deposit')
+                DB::raw("SUM(CASE WHEN payment_month = {$lastMonth} AND payment_year = {$lastYear} THEN amount ELSE 0 END) as last_deposit"),
+                DB::raw("SUM(CASE WHEN payment_month = {$currentMonth} AND payment_year = {$currentYear} THEN amount ELSE 0 END) as current_deposit"),
+                DB::raw("SUM(CASE WHEN payment_month = {$nextMonth} AND payment_year = {$nextYear} THEN amount ELSE 0 END) as next_month_deposit")
             )
-            ->setBindings([$lastMonth, $lastYear, $currentMonth, $currentYear, $nextMonth, $nextYear])
             ->first();
         // deposit values
         $lastDepositAmount = (int) ($rowData->last_deposit ?? 0);
