@@ -117,6 +117,7 @@ Route::middleware('cors')->group(function () {
     });
 
     Route::get('generate-pdf-report', [ReportsController::class, 'generatePdfReport'])->name('api.collection_pdf_report');
+    Route::get('daily-accounts-collection-report', [ReportsController::class, 'dailyAccountsCollectionReport'])->name('api.dailyAccountsCollectionReport');
     Route::get('monthly-posting-report', [PdfReportController::class, 'monthlyPostingReport']);
     Route::get('customer-installment-report', [PdfReportController::class, 'getCustomerInstallmentReport']);
     Route::get('rm-months-deposits-report', [PdfReportController::class, 'rmMonthsDepositsReport']);

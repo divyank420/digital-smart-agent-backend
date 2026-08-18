@@ -228,7 +228,7 @@ class DopController extends Controller
             ->when(data_get($filter, 'selectedFilter') === 'matured', function ($query) {
                 $query->where('status', 'Matured');
             });
-
+            
         if ($request->type == 'list') {
             $accountsQuery->select('id', 'agent_id', 'account_no', 'account_name', 'monthly_amount', 'short_code', 'defaulter_installment');
 
@@ -236,10 +236,9 @@ class DopController extends Controller
 
             $data['accounts_by_acc_no'] = $accountsCollection->keyBy('account_no');
             $data['accounts_by_short_code'] = $accountsCollection->keyBy('short_code')->toArray();
-
             return Helper::sendResponse('Accounts List', 1, $data);
         } else {
-            $accounts = $accountsQuery->paginate(10);
+            $accounts = $request->type == 'all'  ? $accountsQuery->get() : $accountsQuery->paginate(10);
             return Helper::sendResponse('Accounts List', 1, $accounts);
         }
     }

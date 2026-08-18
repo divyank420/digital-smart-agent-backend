@@ -51,19 +51,12 @@ class CompanyAccountController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Bank account created successfully',
-                'data' => $account
-            ]);
+            return Helper::sendResponse('Bank account created successfully', 1);
         } catch (\Exception $e) {
-
+            dd($e->getMessage());
             DB::rollBack();
-
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage()
-            ], 500);
+            return Helper::sendResponse($e->getMessage(),500);
+            
         }
     }
 
