@@ -61,14 +61,14 @@ class RmController extends Controller
 
                 $rmData->rm_code = 'RM-' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
                 $rmData->save();
-                if(isset($request->last_settled_month) && isset($request->last_settled_year) && isset($request->last_settled_amount)){
+                if(isset($request->opening_month) && isset($request->opening_year) && (isset($request->opening_balance) && $request->opening_balance > 0)){
                     SavingRmEntries::create([
                         'company_id'         => $user->company_id,
                         'user_id'            => $user->id,
                         'rm_id'              => $rmData->id,
-                        'amount'             => $request->last_settled_amount,
-                        'payment_month'      => $request->last_settled_month,
-                        'payment_year'       => $request->last_settled_year,
+                        'amount'             => $request->opening_balance,
+                        'payment_month'      => $request->opening_month,
+                        'payment_year'       => $request->opening_year,
                         'entry_date'         => date('Y-m-d'),
                     ]);
                 }

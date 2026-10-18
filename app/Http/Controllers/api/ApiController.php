@@ -121,7 +121,7 @@ class ApiController extends Controller
         if (!$user || ($user->role !== 'Owner' && $user->role !== 'Developer')) {
             $query->where('access_level', 'all');
         }
-        $settings = ['current_version' =>  '2.0.3'];
+        $settings = ['current_version' =>  '2.0.9','isForceUpdate'=>false];
         $settings['config_settings'] = $query->get()->toArray();
 
         return sendResponse('Config settings.', 200, $settings);
