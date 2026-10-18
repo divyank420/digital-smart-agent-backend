@@ -87,12 +87,15 @@ Route::middleware('cors')->group(function () {
         
         Route::post('update-company-config-settings', [ApiController::class, 'updateCompanyConfigSettings']);
 
+        
+
 
         /* DOP Section API's */
         Route::prefix('dop')->controller(DopController::class)->group(function () {
             Route::post('dashboard',  'dopDashboard');
             Route::post('accounts',  'getDopAccounts');
             Route::post('lots',  'lots');
+            Route::post('lots-creation',  'lotsCreation');
         });
 
         /* Bank Accounts */

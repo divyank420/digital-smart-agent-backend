@@ -106,8 +106,6 @@ class ApiController extends Controller
                 $user->agent_list = Helper::getCustomerAgentsList($user->id);
             }
 
-            //$user = Auth::user();
-
             return sendResponse('Login Successful.', 200, ['token' => $token, 'userData' => $user]);
         } catch (\Throwable $th) {
             sendResponse($th->getMessage());
@@ -121,7 +119,7 @@ class ApiController extends Controller
         if (!$user || ($user->role !== 'Owner' && $user->role !== 'Developer')) {
             $query->where('access_level', 'all');
         }
-        $settings = ['current_version' =>  '2.0.9','isForceUpdate'=>false];
+        $settings = ['current_version' =>  '2.1.5','isForceUpdate'=>false];
         $settings['config_settings'] = $query->get()->toArray();
 
         return sendResponse('Config settings.', 200, $settings);
@@ -208,7 +206,7 @@ class ApiController extends Controller
                         $checkAlreadyAddedDenomination->n_10 += $requestData['n_10'];
                         $checkAlreadyAddedDenomination->online += $requestData['online'];
                     }
-                    //dd($checkAlreadyAddedDenomination);
+
                     $checkAlreadyAddedDenomination->save();
                 } else {
                     sendResponse("You cannot update this denomination", 0);

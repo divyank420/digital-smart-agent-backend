@@ -9,7 +9,10 @@ use App\Models\DopLot;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+
+use function Illuminate\Log\log;
 
 class DopController extends Controller
 {
@@ -269,5 +272,13 @@ class DopController extends Controller
             ->latest()
             ->paginate(10);
         return Helper::sendResponse('Lots Listing', 1, $lots);
+    }
+
+    public function lotsCreation(Request $request){
+        Log::info($request->all());
+        //$requestData = $request->
+        // DB::transaction(function () use ($requestData, $user, $activeAgent,$batch) {
+
+        // });
     }
 }

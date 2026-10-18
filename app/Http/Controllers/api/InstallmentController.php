@@ -42,8 +42,11 @@ class InstallmentController extends Controller
                 return Helper::sendResponse("Customer Not found", 0);
             }
             $user = Auth::user();
-            $company_settings = SavingCompany::find($user->company_id)->settings;
-            $collectionUpdates = json_decode($company_settings, true)['collection_updates'];
+            $company = SavingCompany::find($user->company_id);
+            $settings = ($company && !empty($company->settings))
+                ? json_decode($company->settings, true) ?? []
+                : [];
+            $collectionUpdates = $settings['collection_updates'] ?? config('constants.MANUAL_WHATSAPP_UPDATES');
 
             /* ---------------- BASIC DATA ---------------- */
             $requestData['company_id'] = $user->company_id;
