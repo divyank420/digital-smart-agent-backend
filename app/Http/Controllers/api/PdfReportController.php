@@ -40,7 +40,7 @@ class PdfReportController extends Controller
 
             $account_type = (isset($request->account_type) && !empty($request->account_type)) ? $request->account_type : 'daily';
             $year = date('Y', strtotime($requestDate));
-            $month = date('m', strtotime($requestDate));;
+            $month = date('m', strtotime($requestDate));
             $endDate = (date('m') == $month && date('Y') == $year) ? date('d') : date('t', strtotime($requestDate));
             $company_id = $request->company_id;
 

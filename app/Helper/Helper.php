@@ -98,7 +98,7 @@ class Helper
         /* Last Entry Data */
         $entryData = SavingRmEntries::where(['rm_id' => $rmId])->orderBy('id', 'DESC')->first();
 
-        $summary = self::getRmPaymentSummary($rmId,true);
+        $summary = self::getRmPaymentSummary($rmId, true);
 
         if (!empty($entryData)) {
             $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
@@ -108,57 +108,43 @@ class Helper
         ];
         return array_merge($entrySetup, $summary);
     }
-    public static function getRmPaymentSummary($rmId,$isLastEntry = false){
-        $now = now();
-        $currentMonth = (int)$now->month;
-        $currentYear = (int)$now->year;
-        $lastMonth = (int)$now->copy()->subMonth()->month;
-        $lastYear = (int)$now->copy()->subMonth()->year;
-        $nextMonth = (int)$now->copy()->addMonth()->month;
-        $nextYear = (int)$now->copy()->addMonth()->year;
+    public static function getRmPaymentSummary($rmId, $isLastEntry = false)
+    {
 
-        $rowData = SavingRmEntries::leftJoin('saving_rms', 'rm_id', '=', 'saving_rms.id')
-            ->where('rm_id', $rmId)
+        $now = now();
+        $currentMonth = (int) $now->month;
+        $currentYear = (int) $now->year;
+
+        $subMonth = $now->copy()->subMonth();
+        $lastMonth = (int) $subMonth->month;
+        $lastYear = (int) $subMonth->year;
+
+        $addMonth = $now->copy()->addMonth();
+        $nextMonth = (int) $addMonth->month;
+        $nextYear = (int) $addMonth->year;
+        $rm = SavingRm::find($rmId);
+        if (!$rm) {
+            return null;
+        }
+        $openMonth = (int) ($rm->open_month ?: $currentMonth);
+        $openYear = (int) ($rm->open_year ?: $currentYear);
+
+        $rowData = SavingRmEntries::where('rm_id', $rmId)
             ->select(
                 'rm_id',
                 DB::raw('SUM(amount) as total_deposit'),
-
-                DB::raw("
-                SUM(CASE 
-                    WHEN payment_month = $lastMonth 
-                    AND payment_year = $lastYear 
-                    THEN amount ELSE 0 
-                END) as last_deposit
-            "),
-
-                DB::raw("
-                SUM(CASE 
-                    WHEN payment_month = $currentMonth 
-                    AND payment_year = $currentYear 
-                    THEN amount ELSE 0 
-                END) as current_deposit
-            "),
-
-                DB::raw("
-                SUM(CASE 
-                    WHEN payment_month = $nextMonth 
-                    AND payment_year = $nextYear 
-                    THEN amount ELSE 0 
-                END) as next_month_deposit
-            ")
+                DB::raw("SUM(CASE WHEN payment_month = {$lastMonth} AND payment_year = {$lastYear} THEN amount ELSE 0 END) as last_deposit"),
+                DB::raw("SUM(CASE WHEN payment_month = {$currentMonth} AND payment_year = {$currentYear} THEN amount ELSE 0 END) as current_deposit"),
+                DB::raw("SUM(CASE WHEN payment_month = {$nextMonth} AND payment_year = {$nextYear} THEN amount ELSE 0 END) as next_month_deposit")
             )
             ->first();
         // deposit values
-        $lastDepositAmount = (int)($rowData->last_deposit ?? 0);
-        $currentDepositAmount = (int)($rowData->current_deposit ?? 0);
-        $nextDepositAmount = (int)($rowData->next_month_deposit ?? 0);
+        $lastDepositAmount = (int) ($rowData->last_deposit ?? 0);
+        $currentDepositAmount = (int) ($rowData->current_deposit ?? 0);
+        $nextDepositAmount = (int) ($rowData->next_month_deposit ?? 0);
 
         // load monthly amount history once
         $history = Helper::getEffectiveMonthlyAmount($rmId, null, null, 'all');
-
-        $rm = SavingRm::find($rmId);
-        $openMonth = (int)$rm->open_month;
-        $openYear = (int)$rm->open_year;
 
         // resolve monthly amounts
         $previousMonthlyAmount = Helper::resolveMonthlyAmount($history, $rm->monthly_amount, $lastMonth, $lastYear);
@@ -170,21 +156,17 @@ class Helper
         $lastMonthValid = !($lastYear < $openYear || ($lastYear == $openYear && $lastMonth < $openMonth));
 
         if ($lastMonthValid && ($lastDepositAmount < $previousMonthlyAmount)) {
-
             $month = $lastMonth;
             $year = $lastYear;
             $remainingAmount = $previousMonthlyAmount - $lastDepositAmount;
             $deposit = $lastDepositAmount;
             $trackingMonth = 'previous';
-
         } elseif ($currentDepositAmount < $currentMonthlyAmount) {
-
             $month = $currentMonth;
             $year = $currentYear;
             $remainingAmount = $currentMonthlyAmount - $currentDepositAmount;
             $deposit = $currentDepositAmount;
         } else {
-
             $month = $nextMonth;
             $year = $nextYear;
             $remainingAmount = $nextMonthlyAmount;
@@ -207,102 +189,7 @@ class Helper
             'tracking_month' => $trackingMonth
         ];
     }
-    public static function getRmPaymentSummary_old($rmId)
-    {
-        $currentMonth = (int)date('m');
-        $currentYear = (int)date('Y');
-        $lastMonth = (int)date('m', strtotime(date('Y-m-d') . '-1 month'));
-        $lastYear = (int)date('Y', strtotime(date('Y-m-d') . '-1 month'));
-        $nextMonth = (int)date('m', strtotime(date('Y-m-d') . '+1 month'));
-        $nextYear = (int)date('Y', strtotime(date('Y-m-d') . '+1 month'));
 
-        $rowData = SavingRmEntries::leftJoin('saving_rms', 'rm_id', '=', 'saving_rms.id')
-            ->select(
-                DB::raw('CAST(sum(amount) as INT) as total_deposit'),
-                'monthly_amount',
-                DB::raw('SUM(CASE WHEN payment_month = "' . $lastMonth . '" and payment_year = "' . $lastYear . '" THEN amount else 0 END) AS last_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = "' . $currentMonth . '" and payment_year = "' . $currentYear . '" THEN amount else 0 END) AS current_deposit'),
-                DB::raw('SUM(CASE WHEN payment_month = "' . $nextMonth . '" and payment_year = "' . $nextYear . '" THEN amount else 0 END) AS next_month_deposit'),
-            )->where('rm_id', $rmId)
-            ->first();
-        $month = (int)date('m');
-        $year = (int)date('Y');
-
-        $monthlyAmountHistory = Helper::getEffectiveMonthlyAmount($rowData->rm_id, null, null, 'all');
-
-        $previous_monthly_amount = Helper::resolveMonthlyAmount($monthlyAmountHistory, 0, $lastMonth, $lastYear);
-        $monthly_amount = Helper::resolveMonthlyAmount($monthlyAmountHistory, 0, $currentMonth, $currentYear);
-        $lastDepositAmount = (int)$rowData->last_deposit;
-        $currentDepositAmount = (int)$rowData->current_deposit;
-        $nextDepositAmount = (int)$rowData->next_month_deposit;
-        $trackingMonth = 'current';
-        if ($lastDepositAmount < $previous_monthly_amount) {
-            $month = $lastMonth;
-            $year = $lastYear;
-            $remainingAmount = $previous_monthly_amount - $lastDepositAmount;
-            $trackingMonth = 'previous';
-            $deposit = $lastDepositAmount;
-        } else if ($currentDepositAmount <= $monthly_amount) {
-            $month = $currentMonth;
-            $year = $currentYear;
-            $remainingAmount = $monthly_amount - $currentDepositAmount;
-            $deposit = $currentDepositAmount;
-        } else {
-            $month = $nextMonth;
-            $year = $nextYear;
-            $remainingAmount = $monthly_amount;
-            $trackingMonth = 'advance';
-            $deposit = $nextDepositAmount;
-        }
-        $entrySetup = [
-            'last_month' => $lastMonth,
-            'last_year' => $lastYear,
-            'current_month' => $currentMonth,
-            'current_year' => $currentYear,
-            'month' => $month,
-            'year' => $year,
-            'last_month_deposit' => $lastDepositAmount,
-            'current_month_deposit' => $currentDepositAmount,
-            'deposit_amount' => $deposit,
-            'remaining_amount' => $remainingAmount,
-            'monthly_amount' => $monthly_amount,
-            'tracking_month' => $trackingMonth
-        ];
-        return $entrySetup;
-    }
-    public static function getLastEntry_old($rmId)
-    {
-        $monthly_amount = SavingRm::where(['id' => $rmId])->pluck('monthly_amount')->first();
-        $entryData = SavingRmEntries::where(['rm_id' => $rmId])->orderBy('id', 'DESC')->first();
-        $month = (int)date('m');
-        $year = (int)date('Y');
-        $totalDepositAmount = SavingRmEntries::where([
-            'rm_id' => $rmId,
-            'payment_month' => $month,
-            'payment_year' => $year
-        ])->sum('amount');
-
-        if ($totalDepositAmount >= $monthly_amount) {
-            $month = $month == 12 ? 0 : $month;
-            $year = $month == 12 ? $year + 1 : $year;
-            $remainingAmount = '+' . ($totalDepositAmount - $monthly_amount);
-        } else {
-            $year = $year;
-            $month = $month - 1;
-            $remainingAmount = '-' . ($monthly_amount - $totalDepositAmount);
-        }
-        if (!empty($entryData)) {
-            $lastEntryData = ['entry_date' => date('d-M-Y', strtotime($entryData->created_at)), 'amount' => $entryData->amount];
-        }
-        $entrySetup = [
-            'last_entry_data' => $lastEntryData ?? [],
-            'month' => $month,
-            'year' => $year,
-            'deposit_amount' => $totalDepositAmount,
-            'remaining_amount' => $remainingAmount,
-        ];
-        return $entrySetup;
-    }
     public  static function sendResponse($message = 'Something went wrong', $status = 500, $data = null, $extra = null)
     {
         $response = ['status' => $status, 'message' => $message];
@@ -548,5 +435,82 @@ class Helper
         } catch (\Exception $e) {
             return $url; // fallback
         }
+    }
+
+    public static function getCustomerAgentsList($customerId, $type = 'list')
+    {
+        $companies =  SavingRm::where('customer_id', $customerId)->groupBy('company_id')->pluck('company_id')->toArray();
+        $agents = SavingCompany::whereIn('id', $companies)->get();
+        return $agents;
+    }
+
+    public static function updateDenominations($companyId, $userId, $date, $collectionDeno = [], $returnDeno = [])
+    {
+        // Automatically decode if passed as JSON strings
+        if (is_string($collectionDeno)) {
+            $collectionDeno = json_decode($collectionDeno, true) ?? [];
+        } else {
+            $collectionDeno = (array) $collectionDeno;
+        }
+
+        // Bulletproof conversion for return_deno (Handles String, Array, Object, Null)
+        if (is_string($returnDeno)) {
+            $returnDeno = json_decode($returnDeno, true) ?? [];
+        } else {
+            $returnDeno = (array) $returnDeno;
+        }
+
+        $fields = ['2000', '500', '200', '100', '50', '20', '10'];
+        $mergedDeno = [];
+
+        // 1. Add collection values (positive)
+        foreach ($collectionDeno as $note => $val) {
+            $mergedDeno[$note] = ($mergedDeno[$note] ?? 0) + (int)$val;
+        }
+
+        // 2. Subtract return values (negative)
+        foreach ($returnDeno as $note => $val) {
+            $mergedDeno[$note] = ($mergedDeno[$note] ?? 0) - (int)$val;
+        }
+
+        if (empty($mergedDeno)) {
+            return;
+        }
+
+        // Fetch existing record for this date & user
+        $existing = SavingDenomination::where([
+            'company_id'        => $companyId,
+            'user_id'           => $userId,
+            'denomination_date' => $date,
+            'type'              => 'credit'
+        ])->first();
+
+        $dataToSave = [
+            'company_id'        => $companyId,
+            'user_id'           => $userId,
+            'denomination_date' => $date,
+            'type'              => 'credit'
+        ];
+
+        // Calculate final counts (allowing negative values for returns/adjustments)
+        foreach ($fields as $note) {
+            $col = "n_{$note}";
+            $netChange = $mergedDeno[$note] ?? 0;
+            $current = $existing ? ($existing->$col ?? 0) : 0;
+
+            // Removed max(0, ...) so negative numbers can be stored and adjusted later
+            $dataToSave[$col] = $current + $netChange;
+        }
+
+        // Single query to update or create
+        SavingDenomination::updateOrCreate(
+            [
+                'company_id'        => $companyId,
+                'user_id'           => $userId,
+                'denomination_date' => $date,
+                'type'              => 'credit'
+            ],
+            $dataToSave
+        );
     }
 }

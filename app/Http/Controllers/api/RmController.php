@@ -21,55 +21,65 @@ class RmController extends Controller
     public function newRm(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'customer_id'        => 'required',
             'name'               => 'required',
-            'mobile'             => 'required|digits:10',
             'account_type'       => 'required',
             'monthly_amount'     => 'required|integer',
             'installment_amount' => 'required|integer',
+            'opening_month'     => 'required|integer',
+            'opening_year' => 'required|integer',
         ]);
 
         if ($validator->fails()) {
             return Helper::sendResponse(Helper::ValidationSet($validator->errors()), 422);
         }
-
         DB::beginTransaction();
 
         try {
-            $customer = SavingCustomer::firstOrCreate(
-                ['mobile' => $request->mobile],
-                [
-                    'name'     => $request->name,
-                    'email'    => $request->email,
-                    'password' => Hash::make('user@123'),
-                ]
-            );
+            $user = Auth::user();
+            $name = ucwords(trim($request->name, ''));
+            $existRm = SavingRm::where([
+                'name' => $name,
+                'company_id' => $user->company_id,
+                'customer_id' => $request->customer_id,
+            ])->first();
 
-            if ($customer->wasRecentlyCreated) {
-                $customer->rm_code = 'RM' . str_pad($customer->id, 6, "0", STR_PAD_LEFT);
-                $customer->save();
+            $status = 0;
+            if (!$existRm) {
+                $rmData = SavingRm::create([
+                    'name'               => $name,
+                    'company_id'         => $user->company_id,
+                    'customer_id'        => $request->customer_id,
+                    'account_type'       => $request->account_type,
+                    'monthly_amount'     => $request->monthly_amount,
+                    'installment_amount' => $request->installment_amount,
+                    'opening_month'      => $request->opening_month ?? date('m'),
+                    'opening_year'       => $request->opening_year ?? date('Y'),
+                    'opening_balance'    => $request->opening_balance ?? 0,
+                    'status'             => 1
+                ]);
+
+                $rmData->rm_code = 'RM-' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
+                $rmData->save();
+                if(isset($request->last_settled_month) && isset($request->last_settled_year) && isset($request->last_settled_amount)){
+                    SavingRmEntries::create([
+                        'company_id'         => $user->company_id,
+                        'user_id'            => $user->id,
+                        'rm_id'              => $rmData->id,
+                        'amount'             => $request->last_settled_amount,
+                        'payment_month'      => $request->last_settled_month,
+                        'payment_year'       => $request->last_settled_year,
+                        'entry_date'         => date('Y-m-d'),
+                    ]);
+                }
+                $message = 'RM Successfully Added';
+                $status = 1;
+            } else {
+                $message = "RM already exist";
             }
 
-            $user = Auth::user();
-
-            $rmData = SavingRm::create([
-                'name'               => ucwords($request->name),
-                'company_id'         => $user->company_id,
-                'agent_id'           => $user->id,
-                'customer_id'        => $request->customer_id,
-                'account_type'       => $request->account_type,
-                'monthly_amount'     => $request->monthly_amount,
-                'installment_amount' => $request->installment_amount,
-                'opening_month'      => $request->opening_month ?? date('m'),
-                'opening_year'       => $request->opening_year ?? date('Y'),
-                'opening_balance'    => $request->opening_balance ?? 0,
-            ]);
-
-            $rmData->rm_code = 'RM' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
-            $rmData->save();
-
             DB::commit();
-
-            return Helper::sendResponse("RM Successfully Added", 200);
+            return Helper::sendResponse($message, $status);
         } catch (\Throwable $th) {
             DB::rollback();
             return Helper::sendResponse($th->getMessage(), 500);
@@ -89,6 +99,7 @@ class RmController extends Controller
         if (!empty($rmData)) {
             Helper::sendResponse("Rm Detail", 1, $rmData);
         }
+        Helper::sendResponse("No Rm Found", 0);
     }
 
     public function editRm(Request $request)
@@ -96,39 +107,25 @@ class RmController extends Controller
         $validator = Validator::make($request->all(), [
             'rm_id' => 'required|integer',
             'name' => 'required',
-            'mobile' => 'required',
+            'opening_month' => 'required|integer',
+            'opening_year' => 'required|integer',
             'account_type' => 'required',
-            'opening_balance' => 'required|integer',
         ]);
+
         if ($validator->fails()) {
             $error = Helper::ValidationSet($validator->errors());
         }
-
         /* Customer Detail Save */
-
         $rmData = SavingRm::find($request->rm_id);
 
-        $customer = SavingCustomer::where('mobile', $request->mobile)->first();
-        if (!empty($customer)) {
-            $rmData->customer_id = $customer->id;
-        } else {
-            $customer = SavingCustomer::find($request->customer_id);
-            if ($customer->mobile != '') {
-                $customer->mobile = $request->mobile;
-            }
-            if ($customer->email != '') {
-                $customer->email = $request->email;
-            }
-            $customer->save();
-        }
+        // $rmData->name = $request->name;
+        // $rmData->customer_id = $request->customer_id;
+        // $rmData->account_type = $request->account_type;
+        // $rmData->opening_balance = $request->opening_balance;
+        // $rmData->opening_month = $request->opening_month;
+        // $rmData->opening_year = $request->opening_year;
 
-        $rmData->name = $request->name;
-        $rmData->account_type = $request->account_type;
-        $rmData->opening_balance = $request->opening_balance;
-        $rmData->opening_month = $request->opening_month;
-        $rmData->opening_year = $request->opening_year;
-
-
+        $rmData->fill($request->all());
         if ($rmData->save()) {
             Helper::sendResponse("Update rm detail Successfully", 1);
         }
@@ -279,12 +276,13 @@ class RmController extends Controller
             $year = $request->year ?? date('Y');
             $rmEntries = SavingRmEntries::with(['RmDetail', 'Agent'])->where(['rm_id' => $request->rm_id]);
             $rmEntries = $rmEntries->where(['payment_month' => intval($month), 'payment_year' => intval($year)]);
-            $totalAmount = $rmEntries->sum('amount');
+            $totalAmount = $rmEntries->clone()->sum('amount');
+            $totalTrashedAmount = $rmEntries->clone()->whereNotNull('deleted_at')->sum('amount');
             $rmEntries = $rmEntries->orderBy('entry_date', 'DESC')->get()->map->formatData()->toArray();
             if (!empty($rmEntries)) {
-                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount]);
+                Helper::sendResponse('Entry List', 1, $rmEntries, ['total_amount' => $totalAmount, 'total_trashed_amount' => $totalTrashedAmount]);
             } else {
-                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount]);
+                Helper::sendResponse('No Record Found', 1, [], ['total_amount' => $totalAmount, 'total_trashed_amount' => $totalTrashedAmount]);
             }
         } catch (\Throwable $th) {
             Helper::sendResponse($th->getMessage());
@@ -326,35 +324,75 @@ class RmController extends Controller
         $limit = 15;
         $skip = 0;
         $search = '';
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+
         if (isset($request->page) && !empty($request->page)) {
             $skip = $limit * ($request->page - 1);
         }
         if (isset($request->search) && !empty($request->search)) {
             $search = $request->search;
         }
-        $entry = SavingRm::leftJoin('saving_rm_entries', function ($join) {
+        $totalRmQuery = SavingRm::where('monthly_amount', '>', 0)
+            ->where(function ($q) use ($month, $year) {
+                $q->where('saving_rms.opening_year', '<', $year)
+                    ->orWhere(function ($subQ) use ($month, $year) {
+                        $subQ->where('saving_rms.opening_year', '=', $year)
+                            ->where('saving_rms.opening_month', '<=', $month);
+                    })
+                    ->orWhereNull('saving_rms.opening_year');
+            })
+            ->when(!empty($search), function ($q) use ($search) {
+                return $q->where('saving_rms.name', 'LIKE', '%' . $search . '%');
+            });
+
+        $totalRm = $totalRmQuery->count();
+        $query = SavingRm::leftJoin('saving_rm_entries', function ($join) use ($month, $year) {
             $join->on('saving_rm_entries.rm_id', '=', 'saving_rms.id')
-                ->where('saving_rm_entries.payment_month', '=', date('m'))
-                ->where('saving_rm_entries.payment_year', '=', date('Y'));
+                ->where('saving_rm_entries.payment_month', '=', $month)
+                ->where('saving_rm_entries.payment_year', '=', $year)
+                ->whereNull('saving_rm_entries.deleted_at');
         })
-            ->select('saving_rm_entries.rm_id', 'saving_rms.name', 'saving_rm_entries.amount', 'monthly_amount', 'rm_code', DB::raw('CAST(COALESCE(SUM(saving_rm_entries.amount), 0) AS INT) as total_amount'))
-            ->where('saving_rms.monthly_amount', '>', 0);
-        if (!empty($search)) {
-            $entry = $entry->where('saving_rms.name', 'LIKE', '%' . $search . '%');
-        }
-        $entry = $entry->groupBy('saving_rms.id')
+            ->select(
+                'saving_rms.id as id',
+                'saving_rms.name',
+                'saving_rms.monthly_amount',
+                'saving_rms.rm_code',
+                DB::raw('CAST(COALESCE(SUM(saving_rm_entries.amount), 0) AS INT) as total_amount')
+            )
+            ->where('saving_rms.monthly_amount', '>', 0)
+            ->where(function ($q) use ($month, $year) {
+                $q->where('saving_rms.opening_year', '<', $year)
+                    ->orWhere(function ($subQ) use ($month, $year) {
+                        $subQ->where('saving_rms.opening_year', '=', $year)
+                            ->where('saving_rms.opening_month', '<=', $month);
+                    })
+                    ->orWhereNull('saving_rms.opening_year');
+            })
+            ->when(!empty($search), function ($q) use ($search) {
+                return $q->where('saving_rms.name', 'LIKE', '%' . $search . '%');
+            })
+            ->groupBy('saving_rms.id', 'saving_rms.name', 'saving_rms.monthly_amount', 'saving_rms.rm_code')
             ->havingRaw('COALESCE(SUM(saving_rm_entries.amount), 0) < saving_rms.monthly_amount')
             ->orderBy('saving_rms.name', 'asc');
 
-        $totalRecord = $entry->sum('total_amount');
-        $totalPage = $totalRecord / $limit;
-        $totalPage = ($totalPage) > 0 ? $totalPage : 1;
-        $entry = $entry->take($limit)->skip($skip)->get();
+        $totalRecord = DB::query()->fromSub($query->toBase(), 'filtered_pending')->count();
+        $totalPage = ceil($totalRecord / $limit);
+        $totalPage = $totalPage > 0 ? $totalPage : 1;
+
+        $entry = $query->take($limit)->skip($skip)->get();
+
         if ($entry->count() > 0) {
-            sendResponse('Pending Records', 1, $entry, ['total_record' => $totalRecord, 'total_page' => $totalPage]);
-            //sendResponse('Pending Records',1, $entry,['total_record'=>$totalRecord,'total_page'=>5]);
+            return Helper::SendResponse('Pending Records', 1, $entry, [
+                'total_rms' => $totalRm,
+                'total_record' => $totalRecord,
+                'total_page' => (int)$totalPage
+            ]);
         }
-        sendResponse('No Data Found');
+        if ($entry->count() > 0) {
+            return Helper::sendResponse('Pending Records', 1, $entry, ['total_record' => $totalRecord, 'total_page' => $totalPage]);
+        }
+        return Helper::SendResponse('No Data Found');
     }
 
     public function rmYearlySummary(Request $request)

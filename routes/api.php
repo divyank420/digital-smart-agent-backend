@@ -4,9 +4,12 @@ use App\Http\Controllers\api\ApiController;
 use App\Http\Controllers\api\DashboardController;
 //use App\Http\Controllers\api\admin\AdminDashboardController;
 use App\Http\Controllers\Agent\DenominationController;
+use App\Http\Controllers\api\CompanyAccountController;
+use App\Http\Controllers\api\Customer\CustomerApiController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
 use App\Http\Controllers\api\CustomersController;
+use App\Http\Controllers\api\DopController;
 use App\Http\Controllers\api\ReportsController;
 use App\Http\Controllers\api\PdfReportController;
 use Illuminate\Http\Request;
@@ -39,7 +42,8 @@ Route::middleware('cors')->group(function () {
     Route::middleware('jwt.verify')->group(function () {
         Route::any('dashboard', [DashboardController::class, 'dashboard']);
         Route::post('dashboard-summary', [DashboardController::class, 'getDashboardSummary']);
-        
+
+        Route::get('get-config-settings', [ApiController::class, 'getConfigSettings']);
         Route::post('create-customer', [ApiController::class, 'createCustomer']);
         Route::get('customer-detail', [ApiController::class, 'customerDetail']);
 
@@ -68,8 +72,11 @@ Route::middleware('cors')->group(function () {
 
         Route::Post('upload-denomination', [ApiController::class, 'uploadDenomination']);
         Route::Post('update-denomination', [ApiController::class, 'updateDenomination']);
+        Route::Post('delete-denomination', [ApiController::class, 'DeleteDenomination']);
         Route::any('denomination-detail', [ApiController::class, 'denominationDetail']);
+        Route::any('get-denomination-detail', [ApiController::class, 'getDenominationDetail']);
         Route::any('denomination-list', [ApiController::class, 'denominationList']);
+        Route::any('denominations', [ApiController::class, 'denominationList']);
 
         Route::Post('add-expences', [ApiController::class, 'addExpences']);
         Route::Post('expenses-list', [ApiController::class, 'expencesList']);
@@ -77,6 +84,25 @@ Route::middleware('cors')->group(function () {
         Route::Post('delete-expences', [ApiController::class, 'deleteExpences']);
 
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
+        
+        Route::post('update-company-config-settings', [ApiController::class, 'updateCompanyConfigSettings']);
+
+
+        /* DOP Section API's */
+        Route::prefix('dop')->controller(DopController::class)->group(function () {
+            Route::post('dashboard',  'dopDashboard');
+            Route::post('accounts',  'getDopAccounts');
+            Route::post('lots',  'lots');
+        });
+
+        /* Bank Accounts */
+        Route::prefix('bank-accounts')->group(function () {
+            Route::get('accounts-listing', [CompanyAccountController::class, 'index']);
+            Route::post('add-new-account', [CompanyAccountController::class, 'store']);
+            Route::put('update-account/{id}', [CompanyAccountController::class, 'update']);
+            Route::get('account-detail/{id}', [CompanyAccountController::class, 'show']);
+            Route::get('account-transactions/{id}', [CompanyAccountController::class, 'transactions']);
+        });
 
         /* Reports */
         Route::any('report-dashboard', [ReportsController::class, 'reportDashboard']);
@@ -94,6 +120,7 @@ Route::middleware('cors')->group(function () {
     });
 
     Route::get('generate-pdf-report', [ReportsController::class, 'generatePdfReport'])->name('api.collection_pdf_report');
+    Route::get('daily-accounts-collection-report', [ReportsController::class, 'dailyAccountsCollectionReport'])->name('api.dailyAccountsCollectionReport');
     Route::get('monthly-posting-report', [PdfReportController::class, 'monthlyPostingReport']);
     Route::get('customer-installment-report', [PdfReportController::class, 'getCustomerInstallmentReport']);
     Route::get('rm-months-deposits-report', [PdfReportController::class, 'rmMonthsDepositsReport']);
@@ -111,4 +138,13 @@ Route::middleware('cors')->group(function () {
 Route::prefix('customer')->group(function () {
     Route::post('login', [ApiController::class, 'login']);
     Route::post('yearly-report-summary', [CustomersController::class, 'yearlyReportSummary']);
+
+    Route::middleware('jwt.verify')->group(function () {
+        Route::post('update-password', [CustomerApiController::class, 'updatePassword']);
+        Route::post('update-profile', [CustomerApiController::class, 'updateProfile']);
+
+        Route::controller(CustomersController::class)->group(function () {
+            Route::get('dashboard', 'dashboard');
+        });
+    });
 });

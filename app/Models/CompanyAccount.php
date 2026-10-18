@@ -11,9 +11,9 @@ class CompanyAccount extends Model
 
     protected $table = 'saving_company_accounts';
 
-     protected $fillable = [
+    protected $fillable = [
         'company_id',
-        'customer_name',
+        'account_holder_name',
         'bank_name',
         'account_type',
         'opening_balance',
@@ -22,7 +22,21 @@ class CompanyAccount extends Model
     ];
 
     protected $casts = [
-        'current_balance'=>'integer',
+        'opening_balance' => 'integer',
+        'current_balance' => 'integer',
         'is_active' => 'boolean',
     ];
+
+    public function transactions()
+    {
+        return $this->hasMany(
+            SavingAccountTransaction::class,
+            'account_id'
+        );
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(SavingCompany::class);
+    }
 }

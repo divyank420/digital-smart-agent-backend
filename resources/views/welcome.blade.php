@@ -33,14 +33,15 @@
     <meta property="og:title" content="Digital Smart Agent (DSA) — We make your work easy">
     <meta property="og:description"
         content="Digital Smart Agent (DSA) — an innovative platform to streamline and optimize various aspects for your Post Office Agents, Collection Agents to manage daily customer collections, transactions, expenses, Monthly Posting Reports, WhatsApp updates.">
-    <meta property="og:image" content="{{ asset('assets/trans_app_logo.png') }}">
+    <meta property="og:image" content="{{ asset('assets/og_image.png') }}">
     <meta property="og:url" content="https://www.digitalsmartagent.com">
     <meta property="og:type" content="website">
 
-    
+
     <link rel="canonical" href="https://www.digitalsmartagent.com/" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="{{ asset('css/index.css') }}" />
     <link
         href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap"
         rel="stylesheet">
@@ -115,6 +116,7 @@
             transition: all .3s ease;
             box-shadow: 0 10px 30px -10px rgba(135, 10, 48, 0.6);
         }
+
         .btn-dark {
             background: linear-gradient(135deg, #001d41, #800000);
             color: #fff;
@@ -328,6 +330,12 @@
                     <a href="#testimonials" class="nav-link">Reviews</a>
                     <a href="#contact" class="nav-link">Contact</a>
                 </div>
+                <div class="hidden sm:flex items-center gap-2">
+                    <button onclick="openRequestModal()"
+                        class="btn-ghost text-primary border border-primary/15 bg-white text-sm font-semibold px-4 py-2.5 rounded-xl inline-flex items-center gap-2 hover:border-accent hover:text-accent transition">
+                        <i class="fa-solid fa-file-signature text-xs"></i> Request Software
+                    </button>
+                </div>
                 <div class="gap-4">
                     <a href="/agents"
                         class="btn-dark text-sm font-semibold px-5 py-2.5 rounded-xl hidden sm:inline-flex items-center gap-2">
@@ -367,13 +375,13 @@
                     record expenses, generate professional PDF reports, and notify customers on WhatsApp —
                     all from your pocket.
                 </p>
-                <div class="mt-9 flex flex-wrap gap-4">
-                    <a href="{{asset('digitalsmartagent.apk')}}"  download="Digitalsmartagent"
-                        class="btn-primary px-7 py-4 rounded-xl font-semibold inline-flex items-center gap-2">
-                        <i class="fa-solid fa-download"></i> Download App
-                    </a>
+                <div class="mt-9 flex gap-2">
+                     <button onclick="openRequestModal()"
+                        class="btn-ghost text-primary border border-primary/15 bg-white text-sm font-semibold px-4 py-2.5 rounded-xl inline-flex items-center gap-2 hover:border-accent hover:text-accent transition">
+                        <i class="fa-solid fa-file-signature text-xs"></i>Onboarding Request
+                    </button>
                     <a href="#contact"
-                        class="btn-ghost px-7 py-4 rounded-xl font-semibold inline-flex items-center gap-2">
+                        class="btn-ghost px-4 py-4 rounded-xl font-semibold inline-flex items-center gap-2">
                         <i class="fa-regular fa-envelope"></i> Contact Us
                     </a>
                 </div>
@@ -477,13 +485,13 @@
                     </div>
                 </div>
                 <!-- floating badges -->
-                <div class="absolute -left-6 top-20 glass rounded-2xl p-3 shadow-soft hidden md:flex items-center gap-2 floating"
+                <div class="absolute -left-6 top-16 glass rounded-2xl p-3 shadow-soft hidden md:flex items-center gap-2 floating"
                     style="animation-delay:-2s">
                     <div class="w-9 h-9 rounded-lg gradient-bg text-white flex items-center justify-center"><i
-                            class="fa-brands fa-whatsapp"></i></div>
+                            class="fa-solid fa-cloud-arrow-up"></i></div>
                     <div class="text-xs">
-                        <div class="font-bold text-primary">WhatsApp Sent</div>
-                        <div class="text-primary/60">Instant alerts</div>
+                        <div class="font-bold text-primary">DOP Portal</div>
+                        <div class="text-primary/60">Auto-sync lots</div>
                     </div>
                 </div>
                 <div class="absolute -right-6 bottom-24 glass rounded-2xl p-3 shadow-soft hidden md:flex items-center gap-2 floating"
@@ -567,8 +575,55 @@
                 </h2>
                 <p class="mt-4 text-primary/60 text-lg">Powerful tools designed specifically for collection agents.</p>
             </div>
-
-            <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="mt-14 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">One-tap Lot Building</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Enter short codes (150, 145, 160…) and DSA auto-adds all
+                        accounts to the lot in seconds.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Direct DOP Portal Sync</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Push lots directly to the India Post DOP portal — no
+                        re-typing, no CSV, no errors.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Auto Deposit Slips</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Every synced lot generates a branded deposit slip and
+                        receipt bundle instantly.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-calculator"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Auto Commission & TDS</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Commission, TDS, rebates and default fees are calculated
+                        per lot — no manual math.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Over-limit Auto-move</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Cross the ₹20,000 lot limit? DSA auto-moves overflow into
+                        the next lot — zero effort.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-brands fa-whatsapp"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">WhatsApp Auto-updates</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Customers get receipts, reminders and monthly posting
+                        reports on WhatsApp automatically.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-users-gear"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Multi-Agent Workspace</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Onboard DOP agents & ground-floor sub-agents. Each gets
+                        their own field workspace.</p>
+                </div>
+                <div class="card p-7 reveal">
+                    <div class="icon-wrap"><i class="fa-solid fa-file-pdf"></i></div>
+                    <h3 class="font-display font-bold text-primary mt-5 text-lg">MPR & PDF Reports</h3>
+                    <p class="text-primary/60 mt-2 text-sm">Monthly Posting Reports and daily summaries — ready to
+                        download & share, professionally branded.</p>
+                </div>
                 <!-- Feature cards -->
                 <div class="card p-7 reveal">
                     <div class="icon-wrap"><i class="fa-solid fa-users"></i></div>
@@ -617,12 +672,6 @@
                     <h3 class="font-display font-bold text-primary mt-5 text-lg">WhatsApp Notifications</h3>
                     <p class="text-primary/60 mt-2 text-sm leading-relaxed">Send instant receipts, reminders, and
                         updates to customers directly via WhatsApp.</p>
-                </div>
-                <div class="card p-7 reveal">
-                    <div class="icon-wrap"><i class="fa-solid fa-share-nodes"></i></div>
-                    <h3 class="font-display font-bold text-primary mt-5 text-lg">Monthly Report Sharing</h3>
-                    <p class="text-primary/60 mt-2 text-sm leading-relaxed">Share complete monthly performance reports
-                        with management or stakeholders effortlessly.</p>
                 </div>
             </div>
         </div>
@@ -972,6 +1021,9 @@
                     class="hover:text-white">Terms</a></div>
         </div>
     </footer>
+    <div id="requestModal" class="modal-back" onclick="if(event.target===this)closeRequestModal()">
+        @livewire('onboarding-wizard')
+    </div>
 
     <!-- Floating WhatsApp -->
     <a href="https://wa.me/917665629201"
@@ -1018,6 +1070,142 @@
                     .location.search);
             });
         });
+
+        // ---- Request modal ----
+        const rm = document.getElementById('requestModal');
+
+        function openRequestModal() {
+            rm.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            setStep(1);
+        }
+
+        function closeRequestModal() {
+            rm.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        function setStep(n) {
+            ['step1', 'step2', 'step3', 'step4', 'stepDone'].forEach((id) => document.getElementById(id).classList.add(
+                'hidden'));
+            if (n <= 4) document.getElementById('step' + n).classList.remove('hidden');
+            else document.getElementById('stepDone').classList.remove('hidden');
+            const bar = document.getElementById('stepBar');
+            bar.style.width = (n === 1 ? '10%' : n === 2 ? '35%' : n === 3 ? '70%' : n === 4 ? '95%' : '100%');
+            const dots = [document.getElementById('dot1'), document.getElementById('dot2'), document.getElementById('dot3'),
+                document.getElementById('dot4')
+            ];
+            dots.forEach((d, i) => {
+                const active = (i + 1) <= n;
+                d.className = 'step-dot ' + (active ? 'gradient-bg text-white' : 'bg-slate-200 text-slate-500');
+            });
+            if (n === 3 || n === 4) calcTotal();
+        }
+
+        function calcTotal() {
+            let total = 0;
+            const rows = [];
+            // Software base always
+            rows.push({
+                label: 'DSA Software (Base)',
+                val: 'Included'
+            });
+            if (document.getElementById('pl_agent')?.checked) {
+                const q = +document.getElementById('pl_agent_qty').value || 1;
+                const amt = 150 * q;
+                total += amt;
+                rows.push({
+                    label: `DOP Agents × ${q}`,
+                    val: '₹' + amt + ' /mo'
+                });
+            }
+            if (document.getElementById('pl_mob')?.checked) {
+                const mode = document.querySelector('input[name="pl_mob_mode"]:checked')?.value || 'trial';
+                if (mode === 'trial') {
+                    rows.push({
+                        label: 'Mobile Collection App',
+                        val: 'Free (3 mo trial)'
+                    });
+                } else {
+                    total += 250;
+                    rows.push({
+                        label: 'Mobile Collection App',
+                        val: '₹250 /mo'
+                    });
+                }
+            }
+            if (document.getElementById('pl_wa')?.checked) {
+                total += 200;
+                rows.push({
+                    label: 'WhatsApp Automation',
+                    val: '₹200 /mo'
+                });
+            }
+            const tEl = document.getElementById('rf_total');
+            if (tEl) tEl.textContent = total;
+            const note = document.getElementById('rf_total_note');
+            if (note) note.textContent = 'Billed monthly · Cancel anytime';
+            // Summary on payment step
+            const sum = document.getElementById('rf_summary');
+            if (sum) {
+                sum.innerHTML = rows.map(r =>
+                    `<div class="flex items-center justify-between py-2"><span class="text-primary/70">${r.label}</span><span class="font-semibold text-primary">${r.val}</span></div>`
+                    ).join('');
+            }
+            const pay = document.getElementById('rf_payable');
+            if (pay) pay.textContent = total;
+            const payBtn = document.getElementById('rf_pay_btn');
+            if (payBtn) payBtn.textContent = total;
+        }
+
+        function rfNext(from) {
+            if (from === 1) {
+                const m = document.getElementById('rf_mobile').value.trim();
+                const c = document.getElementById('rf_company').value.trim();
+                const o = document.getElementById('rf_owner').value.trim();
+                const e = document.getElementById('rf_email').value.trim();
+                if (!c || !o || !m || !e) {
+                    alert('Please fill all fields.');
+                    return;
+                }
+                if (!/^\d{10}$/.test(m)) {
+                    alert('Enter a valid 10-digit mobile.');
+                    return;
+                }
+                document.getElementById('otpTo').textContent = '+91 ' + m;
+                setStep(2);
+                setTimeout(() => document.querySelector('#otpWrap input')?.focus(), 100);
+            } else if (from === 2) {
+                const otp = [...document.querySelectorAll('#otpWrap input')].map(i => i.value).join('');
+                if (otp.length < 6) {
+                    alert('Enter the 6-digit OTP (any digits for demo).');
+                    return;
+                }
+                setStep(3);
+            } else if (from === 3) {
+                const dop = document.getElementById('rf_dop').value,
+                    po = document.getElementById('rf_po').value.trim();
+                if (!dop || !po) {
+                    alert('Please fill DOP agents and Post Office.');
+                    return;
+                }
+                setStep(4);
+            }
+        }
+
+        function rfBack(from) {
+            setStep(from - 1);
+        }
+
+        function rfPay() {
+            const total = +document.getElementById('rf_payable').textContent || 0;
+            openConfirmModal(
+                'Proceed to UPI payment?',
+                'You will be redirected to Razorpay to complete a UPI payment of ₹' + total +
+                '. No card or wallet charges apply.',
+                () => setStep(5)
+            );
+        }
     </script>
 </body>
 

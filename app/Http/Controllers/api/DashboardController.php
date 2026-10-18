@@ -10,6 +10,7 @@ use App\Models\SavingDenomination;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Helper\Helper;
+use App\Models\DopAccount;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -20,7 +21,16 @@ class DashboardController extends Controller
             $user = Auth::user();
             $dashboardData = [];
             $dashboardData['total_rm'] = SavingRm::where('company_id', $user->company_id)->count();
-            $dashboardData['today_collection'] = SavingRmEntries::whereDate('created_at', date('Y-m-d'))->where('company_id', $user->company_id)->sum('amount');
+            $todayCollection = SavingRmEntries::selectRaw("
+                SUM(amount) as total_collection,
+                SUM(CASE WHEN amount_type = 'cash' THEN amount ELSE 0 END) as cash_collection,
+                SUM(CASE WHEN amount_type = 'online' THEN amount ELSE 0 END) as online_collection")
+                ->whereDate('created_at', date('Y-m-d'))
+                ->where('company_id', $user->company_id)
+                ->first();
+            $dashboardData['today_collection'] = $todayCollection->total_collection ?? 0;
+            $dashboardData['today_cash_collection'] = $todayCollection->cash_collection ?? 0;
+            $dashboardData['today_online_collection'] = $todayCollection->online_collection ?? 0;
             $dashboardData['yesterday_collection'] = SavingRmEntries::whereDate('created_at', date('Y-m-d', strtotime("-1 days")))->where('company_id', $user->company_id)->sum('amount');
             $dashboardData['today_entry_count'] = SavingRmEntries::whereDate('created_at', date('Y-m-d'))->where('company_id', $user->company_id)->count();
             $dashboardData['current_month']['income'] = SavingRmEntries::whereMonth('entry_date', date('m'))->whereYear('entry_date', date('Y'))->where('company_id', $user->company_id)->sum('amount');
@@ -42,6 +52,16 @@ class DashboardController extends Controller
 
             $dashboardData['remaining_collection'] =
                 $dashboardData['expected_collection'] - $dashboardData['received_collection'];
+
+            $baseQuery = DopAccount::where('company_id', $user->company_id)
+                ->where('status', 'ACTIVE');
+
+            $dashboardData['total_active_accounts'] = (clone $baseQuery)->count();
+
+            $dashboardData['total_defaulter_accounts'] = (clone $baseQuery)
+                ->where('defaulter_installment', '>', 0)
+                ->count();
+
 
             $monthlyPaidRms = SavingRmEntries::select(
                 'rm_id',
