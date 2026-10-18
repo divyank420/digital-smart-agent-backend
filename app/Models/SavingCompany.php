@@ -15,7 +15,7 @@ class SavingCompany extends Model
     //protected $fillable = ['firm_name', 'agent_name', 'email', 'multiple_agent', 'agent_count', 'status'];
 
     protected $table = 'companies';
-    protected $fillable = ['company_name', 'owner_name', 'email', 'mobile_no', 'total_dop_agent', 'sub_agents', 'status'];
+    protected $fillable = ['company_name', 'owner_name', 'email', 'mobile_no', 'total_dop_agent', 'sub_agents','settings','status'];
 
     public function agents()
     {

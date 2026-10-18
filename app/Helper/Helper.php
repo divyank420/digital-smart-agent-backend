@@ -443,4 +443,74 @@ class Helper
         $agents = SavingCompany::whereIn('id', $companies)->get();
         return $agents;
     }
+
+    public static function updateDenominations($companyId, $userId, $date, $collectionDeno = [], $returnDeno = [])
+    {
+        // Automatically decode if passed as JSON strings
+        if (is_string($collectionDeno)) {
+            $collectionDeno = json_decode($collectionDeno, true) ?? [];
+        } else {
+            $collectionDeno = (array) $collectionDeno;
+        }
+
+        // Bulletproof conversion for return_deno (Handles String, Array, Object, Null)
+        if (is_string($returnDeno)) {
+            $returnDeno = json_decode($returnDeno, true) ?? [];
+        } else {
+            $returnDeno = (array) $returnDeno;
+        }
+
+        $fields = ['2000', '500', '200', '100', '50', '20', '10'];
+        $mergedDeno = [];
+
+        // 1. Add collection values (positive)
+        foreach ($collectionDeno as $note => $val) {
+            $mergedDeno[$note] = ($mergedDeno[$note] ?? 0) + (int)$val;
+        }
+
+        // 2. Subtract return values (negative)
+        foreach ($returnDeno as $note => $val) {
+            $mergedDeno[$note] = ($mergedDeno[$note] ?? 0) - (int)$val;
+        }
+
+        if (empty($mergedDeno)) {
+            return;
+        }
+
+        // Fetch existing record for this date & user
+        $existing = SavingDenomination::where([
+            'company_id'        => $companyId,
+            'user_id'           => $userId,
+            'denomination_date' => $date,
+            'type'              => 'credit'
+        ])->first();
+
+        $dataToSave = [
+            'company_id'        => $companyId,
+            'user_id'           => $userId,
+            'denomination_date' => $date,
+            'type'              => 'credit'
+        ];
+
+        // Calculate final counts (allowing negative values for returns/adjustments)
+        foreach ($fields as $note) {
+            $col = "n_{$note}";
+            $netChange = $mergedDeno[$note] ?? 0;
+            $current = $existing ? ($existing->$col ?? 0) : 0;
+
+            // Removed max(0, ...) so negative numbers can be stored and adjusted later
+            $dataToSave[$col] = $current + $netChange;
+        }
+
+        // Single query to update or create
+        SavingDenomination::updateOrCreate(
+            [
+                'company_id'        => $companyId,
+                'user_id'           => $userId,
+                'denomination_date' => $date,
+                'type'              => 'credit'
+            ],
+            $dataToSave
+        );
+    }
 }

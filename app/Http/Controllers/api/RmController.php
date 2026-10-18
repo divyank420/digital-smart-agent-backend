@@ -61,6 +61,17 @@ class RmController extends Controller
 
                 $rmData->rm_code = 'RM-' . str_pad($rmData->id, 6, "0", STR_PAD_LEFT);
                 $rmData->save();
+                if(isset($request->last_settled_month) && isset($request->last_settled_year) && isset($request->last_settled_amount)){
+                    SavingRmEntries::create([
+                        'company_id'         => $user->company_id,
+                        'user_id'            => $user->id,
+                        'rm_id'              => $rmData->id,
+                        'amount'             => $request->last_settled_amount,
+                        'payment_month'      => $request->last_settled_month,
+                        'payment_year'       => $request->last_settled_year,
+                        'entry_date'         => date('Y-m-d'),
+                    ]);
+                }
                 $message = 'RM Successfully Added';
                 $status = 1;
             } else {

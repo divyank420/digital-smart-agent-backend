@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
+use App\Models\ConfigSetting;
 use App\Models\DopAgent;
 use App\Models\SavingDenomination;
 use App\Models\SavingCompany;
@@ -92,9 +93,11 @@ class ApiController extends Controller
                 }
 
                 $dop_agents = $dop_agents->toArray();
+                $companySettings = SavingCompany::find($user->company_id);
                 $accounts = CompanyAccount::where('company_id', $user->company_id)->where('is_active', true)->get();
                 $user->agent_list = $agent_lists;
                 $user->accounts = $accounts;
+                $user->company_settings = $companySettings->settings ?? '';
                 $user->dop_agents = $dop_agents;
             }
             if ($guard == 'customer') {
@@ -114,10 +117,14 @@ class ApiController extends Controller
     public function getConfigSettings(Request $request)
     {
         $user = Auth::user();
-        $settings = [
-            'current_version' => '2.0.3',
-        ];
-        return sendResponse('Login Successful.', 200, $settings);
+        $query = ConfigSetting::active()->orderBy('sort_order');
+        if (!$user || ($user->role !== 'Owner' && $user->role !== 'Developer')) {
+            $query->where('access_level', 'all');
+        }
+        $settings = ['current_version' =>  '2.0.3'];
+        $settings['config_settings'] = $query->get()->toArray();
+
+        return sendResponse('Config settings.', 200, $settings);
     }
 
     public function createCustomer(Request $request)
@@ -512,5 +519,23 @@ class ApiController extends Controller
         } catch (\Throwable $th) {
             sendResponse($th->getMessage());
         }
+    }
+    public function updateCompanyConfigSettings(Request $request)
+    {
+        $user = Auth::user();
+        $settings = $request->input('settings');
+
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true);
+        }
+        if (empty($settings)) {
+            sendResponse('Invalid settings data provided.');
+        }
+
+        SavingCompany::where('id', $user->company_id)->update([
+            'settings' => json_encode($settings)
+        ]);
+
+        return sendResponse('Config settings updated successfully.', 1, $settings);
     }
 }

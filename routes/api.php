@@ -84,6 +84,9 @@ Route::middleware('cors')->group(function () {
         Route::Post('delete-expences', [ApiController::class, 'deleteExpences']);
 
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
+        
+        Route::post('update-company-config-settings', [ApiController::class, 'updateCompanyConfigSettings']);
+
 
         /* DOP Section API's */
         Route::prefix('dop')->controller(DopController::class)->group(function () {
