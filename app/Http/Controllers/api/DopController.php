@@ -6,9 +6,11 @@ use App\Helper\Helper;
 use App\Http\Controllers\Controller;
 use App\Models\DopAccount;
 use App\Models\DopLot;
+use App\Models\DopLotItem;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -151,11 +153,36 @@ class DopController extends Controller
         // Decode filter safely
         $filter = json_decode($request->filter, true) ?? [];
         $user = Auth::user();
+        $generatedlotNo = $lotSequence = 0;
+
 
         // Base query for stats (scoped by company and agent if provided)
         $statsQuery = DopAccount::where('company_id', $user->company_id);
         if (!empty($request->dop_agent_id)) {
             $statsQuery->where('agent_id', $request->dop_agent_id);
+            if ($request?->is_generate_lot_no) {
+                $year = now()->year;
+                $lastLot = DopLot::whereYear('lot_date', $year)
+                    ->where('agent_id', $request->dop_agent_id)
+                    ->latest('id')
+                    ->first();
+
+                Log::info($lastLot);
+                if ($lastLot) {
+                    preg_match('/LOT-\d{4}-(\d+)/', $lastLot->lot_number, $match);
+                    $lotSequence = isset($match[1])
+                        ? (int) $match[1] + 1
+                        : 1;
+                } else {
+                    $lotSequence = 1;
+                }
+
+                $generatedlotNo = sprintf(
+                    'LOT-%d-%04d',
+                    $year,
+                    $lotSequence
+                );
+            }
         }
 
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
@@ -231,7 +258,7 @@ class DopController extends Controller
             ->when(data_get($filter, 'selectedFilter') === 'matured', function ($query) {
                 $query->where('status', 'Matured');
             });
-            
+
         if ($request->type == 'list') {
             $accountsQuery->select('id', 'agent_id', 'account_no', 'account_name', 'monthly_amount', 'short_code', 'defaulter_installment');
 
@@ -242,7 +269,7 @@ class DopController extends Controller
             return Helper::sendResponse('Accounts List', 1, $data);
         } else {
             $accounts = $request->type == 'all'  ? $accountsQuery->get() : $accountsQuery->paginate(10);
-            return Helper::sendResponse('Accounts List', 1, $accounts);
+            return Helper::sendResponse('Accounts List', 1, $accounts, ['generated_lot_no' => $generatedlotNo,'lotSequence'=>$lotSequence]);
         }
     }
 
@@ -274,11 +301,48 @@ class DopController extends Controller
         return Helper::sendResponse('Lots Listing', 1, $lots);
     }
 
-    public function lotsCreation(Request $request){
+    public function lotsCreation(Request $request)
+    {
         Log::info($request->all());
-        //$requestData = $request->
-        // DB::transaction(function () use ($requestData, $user, $activeAgent,$batch) {
+        $dopAgentId = $request->dop_agent_id;
+        $lots = $request->lots;
+        $user = Auth::user();
 
-        // });
+        DB::transaction(function () use ($lots, $user, $dopAgentId) {
+            foreach ($lots as $lot) {
+                $savedLot = DopLot::create([
+                    'company_id'      => $user->company_id,
+                    'agent_id'        => $dopAgentId,
+                    'lot_number'      => $lot['lot_no'],
+                    'lot_date'        => $lot['lot_date'] ?? date('Y-m-d'),
+                    'lot_remark'      => $lot['lot_remark'] ?? null,
+
+                    'total_accounts'  => count($lot['accounts']),
+                    'total_amount'    => $lot['total_amount'],
+                    'defaulter_amount'    => $lot['total_defaulter_amount'],
+                    'rebate_amount'    => $lot['total_rebate_amount'],
+                    'status'      => 'Draft',
+                ]);
+                $items = [];
+
+                foreach ($lot['accounts'] as $account) {
+                    $items[] = [
+                        'lot_id'         => $savedLot->id,
+                        'account_id'     => $account['id'],
+                        'account_number' => $account['account_no'],
+                        'customer_name'  => $account['account_name'],
+                        'aslaas_no'      => $account['aslaas_no'],
+                        'installment'    => $account['installments'],
+                        'defaulter_fee'  => $account['defaulter_fee'] ?? 0,
+                        'rebate_amount'  => $account['rebate_amount'] ?? 0,
+                        'amount'         => $account['monthly_amount'] * $account['installments'],
+                        'is_synced'      => false,
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ];
+                }
+                DopLotItem::insert($items);
+            }
+        });
     }
 }
