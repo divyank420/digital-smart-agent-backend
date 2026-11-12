@@ -28,6 +28,7 @@ class SavingRm extends Model
         'opening_year',
         'opening_balance',
         'maturity_status',
+        'status',
     ];
     protected $casts = [
         'installment_amount' => 'integer',
@@ -85,6 +86,7 @@ class SavingRm extends Model
             'installment_amount' => $this->installment_amount,
             'opening_balance' => $this->opening_balance,
             'total_deposit' => $this->current_month_deposit_amount,
+            'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
