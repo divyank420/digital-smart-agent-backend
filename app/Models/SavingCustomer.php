@@ -34,6 +34,19 @@ class SavingCustomer extends Authenticatable implements JWTSubject
         return $this->belongsTo(User::class, 'rm_id', 'id');
     }
 
+    public function fcmTokens()
+    {
+        return $this->morphMany(FcmToken::class, 'tokenable');
+    }
+
+    public function notifications()
+    {
+        return $this->morphMany(
+            NotificationRecipient::class,
+            'recipient'
+        );
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

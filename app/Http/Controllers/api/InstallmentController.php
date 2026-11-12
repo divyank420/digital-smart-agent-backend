@@ -8,6 +8,7 @@ use App\Models\CompanyAccount;
 use App\Models\SavingCompany;
 use App\Models\SavingRm;
 use App\Models\SavingRmEntries;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,7 @@ class InstallmentController extends Controller
                 return Helper::sendResponse("Customer Not found", 0);
             }
             $user = Auth::user();
+            $companyId = $user->company_id;
             $company = SavingCompany::find($user->company_id);
             $settings = ($company && !empty($company->settings))
                 ? json_decode($company->settings, true) ?? []
@@ -49,7 +51,7 @@ class InstallmentController extends Controller
             $collectionUpdates = $settings['collection_updates'] ?? config('constants.MANUAL_WHATSAPP_UPDATES');
 
             /* ---------------- BASIC DATA ---------------- */
-            $requestData['company_id'] = $user->company_id;
+            $requestData['company_id'] = $companyId;
 
             $requestData['entry_date'] = $request->entry_date
                 ? date('Y-m-d', strtotime($request->entry_date))
@@ -59,7 +61,7 @@ class InstallmentController extends Controller
 
             if ($request->amount_type === 'online' && $request->account) {
                 CompanyAccount::where('id', $request->account)
-                    ->where('company_id', $user->company_id)
+                    ->where('company_id', $companyId)
                     ->firstOrFail();
 
                 $requestData['account_id'] = (int)$request->account;
@@ -80,10 +82,20 @@ class InstallmentController extends Controller
                     $request->collection_deno ?? [],
                     $request->return_deno ?? []
                 );
+                // app(NotificationService::class)->send(
+                //     $rmDetail->customer,
+                //     'RD Installment Received',
+                //     'Your RD installment of ₹' . $request->amount . ' has been successfully deposited.',
+                //     'rm_installment_entry',
+                //     [
+                //         'rm_id' => $request->rm_id,
+                //         'amount' => $request->amount
+                //     ]
+                // );
             }
 
             if (isset($request->is_whatsapp_message)) {
-
+                
                 $sentWhatsappMessage = filter_var($request->is_whatsapp_message, FILTER_VALIDATE_BOOLEAN);
 
                 if (!$sentWhatsappMessage || $collectionUpdates == 'None') {
@@ -180,6 +192,7 @@ class InstallmentController extends Controller
             return Helper::sendResponse($th->getMessage(), 0);
         }
     }
+
     public function editInstallmentEnter(Request $request)
     {
         $requestData = $request->all();
