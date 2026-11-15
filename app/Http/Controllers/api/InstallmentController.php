@@ -4,6 +4,7 @@ namespace App\Http\Controllers\api;
 
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendRmEntryPushNotification;
 use App\Models\CompanyAccount;
 use App\Models\SavingCompany;
 use App\Models\SavingRm;
@@ -82,20 +83,21 @@ class InstallmentController extends Controller
                     $request->collection_deno ?? [],
                     $request->return_deno ?? []
                 );
-                // app(NotificationService::class)->send(
-                //     $rmDetail->customer,
-                //     'RD Installment Received',
-                //     'Your RD installment of ₹' . $request->amount . ' has been successfully deposited.',
-                //     'rm_installment_entry',
-                //     [
-                //         'rm_id' => $request->rm_id,
-                //         'amount' => $request->amount
-                //     ]
-                // );
             }
 
+            SendRmEntryPushNotification::dispatch($request->rm_id, $request->amount);
+
+            // $title = 'Payment Received';
+            // $body = 'We have received your installment of ₹' . $request->amount . ' for your RD account.';
+            // $data = [
+            //     'rm_id' => $request->rm_id,
+            //     'amount' => $request->amount,
+            //     'redirection' => 'rm_collection_detail'
+            // ];
+            // Helper::pushNotification($rmDetail->customer, $title, $body,$data);
+
             if (isset($request->is_whatsapp_message)) {
-                
+
                 $sentWhatsappMessage = filter_var($request->is_whatsapp_message, FILTER_VALIDATE_BOOLEAN);
 
                 if (!$sentWhatsappMessage || $collectionUpdates == 'None') {
@@ -133,7 +135,7 @@ class InstallmentController extends Controller
             $message = "Your *RD* amount has been successfully deposited at Khatod Saving House.\n";
             $message .= "*===============================* \n";
             $message .= "*Transaction* \n";
-            $message .= "*Date*: " . date('d l, Y', strtotime($requestData['entry_date'])) . " 📅\n";
+            $message .= "*Date*: " . date('d M, Y', strtotime($requestData['entry_date'])) . " 📅\n";
             $message .= "*Amount*: " . amountFormat($request->amount) . " 💰\n";
             $message .= "*===============================* \n";
             $monthTitle = date('F Y', strtotime("$year-$month-01"));

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->string('device_name')->nullable();
             $table->timestamp('last_used_at')->nullable();
             $table->timestamps();
-            $table->unique('token');
         });
     }
 

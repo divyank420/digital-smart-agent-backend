@@ -7,10 +7,13 @@ use App\Http\Controllers\Agent\EntriesController;
 use App\Http\Controllers\Agent\DenominationController;
 use App\Http\Controllers\api\PdfReportController;
 use App\Mail\OtpMail;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
+use Kreait\Firebase\Messaging;
+use Kreait\Firebase\Messaging\CloudMessage;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +67,7 @@ Route::get('/clear', function () {
     echo "Cache Cleared";
 });
 
+
 Route::get('rm-current-month-deposit-report', [PdfReportController::class, 'rmCurrentMonthDepositReport'])->name('rm.complete_month_report');
 
 Route::prefix('agent')->group(function () {
@@ -76,42 +80,69 @@ Route::prefix('agent')->group(function () {
 });
 
 
-// Route::get('/test-fcm', function () {
+Route::get('/test-fcm', function () {
 
-//     $deviceToken = "c2BvY7lXQ2ST_LS_spovTY:APA91bGuRyeo2f5iDwcc7C-OXx9gdrIalUJEAY3NwVOD34RUXU6ee0bRBzAcJZH9Ljp08SBZqBUAp1UqzPmBb32o7JNaBDfvy-f1UIBMIViurJiKWLLhvAE";
+    $deviceToken = "fxw3XKOzS-aHWM8FPwewRf:APA91bGeI3L5NWKUfk0r4VD7FUW13uA9vM7VoVszz7VnI9RFJdl2SHGnmUl-K_AAHxdfmezt5EwWnzmlcDp9w55cVPHgzFmhK3SjnuEjNuCtOpIzzdB7lH0";
 
-//     $credentials = json_decode(
-//         file_get_contents(storage_path('app/firebase/firebase.json')),
-//         true
-//     );
+    $credentials = json_decode(
+        file_get_contents(storage_path('app/firebase/firebase.json')),
+        true
+    );
 
-//     $client = new \Google\Auth\Credentials\ServiceAccountCredentials(
-//         "https://www.googleapis.com/auth/firebase.messaging",
-//         $credentials
-//     );
+    $client = new \Google\Auth\Credentials\ServiceAccountCredentials(
+        "https://www.googleapis.com/auth/firebase.messaging",
+        $credentials
+    );
 
-//     $token = $client->fetchAuthToken();
-//     $accessToken = $token['access_token'];
+    $token = $client->fetchAuthToken();
+    $accessToken = $token['access_token'];
 
-//     $projectId = $credentials['project_id'];
+    $projectId = $credentials['project_id'];
 
-//     $response = Http::withToken($accessToken)
-//         ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
-//             "message" => [
-//                 "token" => $deviceToken,
-//                 "notification" => [
-//                     "title" => "Laravel Test 🚀",
-//                     "body" => "Notification is working!",
-//                     "android_channel_id" => "default_channel_id",
-//                 ],
-//                 "android" => [
-//                     "notification" => [
-//                         "sound" => "default",
-//                         "default_sound" => true
-//                     ]
-//                 ]
-//             ]
-//         ]);
+    $response = Http::withToken($accessToken)
+        ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+            "message" => [
+                "token" => $deviceToken,
+                "notification" => [
+                    "title" => "Laravel Test 🚀",
+                    "body" => "Notification is working!",
+                ],
+                "data" => [
+                    "title" => "Laravel Test 🚀",
+                    "body" => "Notification is working!",
+                    "click_action" => "FLUTTER_NOTIFICATION_CLICK", 
+                ],
+                "android" => [
+                    "notification" => [
+                        "sound" => "default",
+                        "default_sound" => true,
+                        "channel_id" => "default", // Ensures sound/banner triggers correctly on Android 8+
+                    ]
+                ]
+            ]
+        ]);
 
-//     return $response->json();
-// });
+
+    return $response->json();
+});
+
+Route::get('/test-fcm-', function (Messaging $messaging) {
+    $deviceToken = "c2BvY7lXQ2ST_LS_spovTY:APA91bGuRyeo2f5iDwcc7C-OXx9gdrIalUJEAY3NwVOD34RUXU6ee0bRBzAcJZH9Ljp08SBZqBUAp1UqzPmBb32o7JNaBDfvy-f1UIBMIViurJiKWLLhvAE";
+
+    $message = CloudMessage::withTarget('token', $deviceToken)
+        ->withNotification(Notification::create('Laravel Test 🚀', 'Notification is working!'))
+        ->withAndroidConfig([
+            'notification' => [
+                'sound' => 'default',
+                'default_sound' => true,
+                'android_channel_id' => 'default_channel_id',
+            ],
+        ]);
+
+    $result = $messaging->send($message);
+
+    return response()->json([
+        'success' => true,
+        'result' => $result,
+    ]);
+});

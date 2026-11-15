@@ -13,7 +13,9 @@ use App\Http\Controllers\api\CustomersController;
 use App\Http\Controllers\api\DopController;
 use App\Http\Controllers\api\ReportsController;
 use App\Http\Controllers\api\PdfReportController;
+use App\Models\SavingCustomer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -85,10 +87,10 @@ Route::middleware('cors')->group(function () {
         Route::Post('delete-expences', [ApiController::class, 'deleteExpences']);
 
         Route::any('rm-scan-code', [ApiController::class, 'RmScanCode']);
-        
+
         Route::post('update-company-config-settings', [ApiController::class, 'updateCompanyConfigSettings']);
 
-        
+
 
 
         /* DOP Section API's */
@@ -128,10 +130,16 @@ Route::middleware('cors')->group(function () {
     Route::get('monthly-posting-report', [PdfReportController::class, 'monthlyPostingReport']);
     Route::get('customer-installment-report', [PdfReportController::class, 'getCustomerInstallmentReport']);
     Route::get('rm-months-deposits-report', [PdfReportController::class, 'rmMonthsDepositsReport']);
+    Route::get('todays-report', [PdfReportController::class, 'todaysReport']);
     Route::get('rm-current-month-deposit-report', function (Illuminate\Http\Request $request) {
         return redirect()->route('rm.complete_month_report', $request->all());
     });
 
+    Route::get('update-customer-password', function () {
+        SavingCustomer::query()->update([
+            'password' => Hash::make('User@123'),
+        ]);
+    });
     Route::prefix('agent')->group(function () {
         //Route::any('dashboard', [AdminDashboardController::class, 'dashboard']);
         Route::get('/get-denomination',  [DenominationController::class, 'getDenominationList'])->name('getDenominationList');

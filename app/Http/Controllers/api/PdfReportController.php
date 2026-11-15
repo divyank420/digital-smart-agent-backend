@@ -9,9 +9,14 @@ use App\Models\Entries;
 use App\Models\SavingRmEntries;
 use App\Exports\MonthlyPostingReportExport;
 use App\Helper\Helper;
+use App\Models\SavingCompany;
+use App\Models\SavingDenomination;
+use App\Models\SavingExpenses;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Excel;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PdfReportController extends Controller
 {
@@ -122,10 +127,10 @@ class PdfReportController extends Controller
         $rm = SavingRm::where('id', $request->key)->first();
         $company = Helper::getCompanyDetail($rm->company_id);
         $entries = SavingRmEntries::with('agent')->where('rm_id', $request->key)
-        ->where('payment_month', $request->month)
-        ->where('payment_year', $request->year)
-        ->get();
-        $report_period = date('M Y', strtotime($request->year.'-'.$request->month.'-1'));
+            ->where('payment_month', $request->month)
+            ->where('payment_year', $request->year)
+            ->get();
+        $report_period = date('M Y', strtotime($request->year . '-' . $request->month . '-1'));
         $pdf = Pdf::loadView('pdf.RmCurrentMonthReport', ['entries' => $entries, 'report_period' => $report_period, 'company' => $company, 'rm' => $rm]);
         $filename = $rm->name
             . '_'
@@ -133,5 +138,70 @@ class PdfReportController extends Controller
             . time()
             . '.pdf';
         return $pdf->stream($filename);
+    }
+
+    public function todaysReport()
+    {
+        $companyId = Auth::user()->company_id ?? 1;
+        $company = SavingCompany::where('id', $companyId)->first();
+        $date = date('Y-m-d');
+        $collectionData = SavingRmEntries::with('RmDetail', 'agent')
+            ->where('company_id', $companyId)
+            ->whereDate('entry_date', $date)
+            ->get();
+
+
+        $denominations = SavingDenomination::select([
+            'id',
+            'user_id',
+            'denomination_date',
+            DB::raw('SUM(CASE WHEN online > 0 THEN online ELSE 0 END) as online'),
+            DB::raw('SUM(CASE WHEN n_2000 > 0 THEN n_2000 ELSE 0 END) as n_2000'),
+            DB::raw('SUM(CASE WHEN n_2000 > 0 THEN n_2000*2000 ELSE 0 END) as n_2000_value'),
+            DB::raw('SUM(CASE WHEN n_500 > 0 THEN n_500 ELSE 0 END) as n_500'),
+            DB::raw('SUM(CASE WHEN n_500 > 0 THEN n_500*500 ELSE 0 END) as n_500_value'),
+            DB::raw('SUM(CASE WHEN n_200 > 0 THEN n_200 ELSE 0 END) as n_200'),
+            DB::raw('SUM(CASE WHEN n_200 > 0 THEN n_200*200 ELSE 0 END) as n_200_value'),
+            DB::raw('SUM(CASE WHEN n_100 > 0 THEN n_100 ELSE 0 END) as n_100'),
+            DB::raw('SUM(CASE WHEN n_100 > 0 THEN n_100*100 ELSE 0 END) as n_100_value'),
+            DB::raw('SUM(CASE WHEN n_50 > 0 THEN n_50 ELSE 0 END) as n_50'),
+            DB::raw('SUM(CASE WHEN n_50 > 0 THEN n_50*50 ELSE 0 END) as n_50_value'),
+            DB::raw('SUM(CASE WHEN n_20 > 0 THEN n_20 ELSE 0 END) as n_20'),
+            DB::raw('SUM(CASE WHEN n_20 > 0 THEN n_20*20 ELSE 0 END) as n_20_value'),
+            DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10 ELSE 0 END) as n_10'),
+            DB::raw('SUM(CASE WHEN n_10 > 0 THEN n_10*10 ELSE 0 END) as n_10_value'),
+        ])->with(['agent'])
+            ->where('company_id', $companyId)
+            ->whereDate('denomination_date', $date)
+            ->groupBy('user_id')
+            ->get();
+
+        $expenseData = SavingExpenses::where('company_id', $companyId)
+            ->whereDate('expenses_date', $date)
+            ->get();
+        $totalCollection = $collectionData->sum('amount');
+        $totalExpenses = $expenseData->sum('amount');
+        $data = [
+            'date' => $date,
+            'company' => $company,
+            'denominations' => $denominations,
+            'collectionData' => $collectionData,
+            'totalCollection' => $totalCollection,
+            'expenseData' => $expenseData,
+            'totalExpenses' => $totalExpenses,
+        ];
+        $pdf = Pdf::loadView('pdf.daily-report', $data);
+        $now = time();
+
+        $filename = "CR-{$date}-{$now}.pdf";
+        return $pdf->stream($filename);
+        return response()->streamDownload(function () use ($pdf) {
+            echo $pdf->output();
+        }, "CR-{$date}-{$now}.pdf", [
+            'Content-Type' => 'application/pdf',
+        ]);
+        return response()->streamDownload(function () use ($pdf) {
+            echo $pdf->output();
+        }, "CR-{$date}-{$now}.pdf");
     }
 }

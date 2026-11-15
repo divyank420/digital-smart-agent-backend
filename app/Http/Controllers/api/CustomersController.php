@@ -19,15 +19,19 @@ class CustomersController extends Controller
     }
 
     public function dashboard(Request $request){
-
         $rms_accounts = SavingRm::where('customer_id',$this->user->id)->pluck('id');
+        //Helper::pushNotification($this->user,'Hello',"tetse");
         $accounts_total = SavingRmEntries::with(['RmDetail:id,name,rm_code,monthly_amount,installment_amount'])->select([
             'rm_id',
             DB::raw('SUM(amount) as account_total'),
         ])->whereIn('rm_id',$rms_accounts)->groupBy('rm_id')->get();
-        
+        $recent_entries = SavingRmEntries::with('RmDetail:id,name')->whereIn('rm_id',$rms_accounts)->limit(5)->latest()->get();
+        $data = [
+            'accounts_total'=>$accounts_total,
+            'recent_entries'=>$recent_entries,
+        ];
 
-        return Helper::sendResponse("Dashboard Data",1,$accounts_total);
+        return Helper::sendResponse("Dashboard Data",1,$data);
     }
     public function portfolio(Request $request){
         $rms = SavingRm::where('customer_id',$this->user->id)->get();

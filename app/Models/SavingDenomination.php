@@ -19,4 +19,8 @@ class SavingDenomination extends Model
             return $query->where('company_id', $company_id);
         }
     }
+
+    public function agent(){
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
 }

@@ -1,7 +1,5 @@
 <?php
 
-
-
 namespace App\Helper;
 
 use App\Models\CompanyAccount;
@@ -15,6 +13,7 @@ use App\Models\SavingRmEntries;
 use App\Models\SavingExpenses;
 use App\Models\SavingCompany;
 use App\Models\User;
+use App\Services\FcmTokenService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 
@@ -26,38 +25,24 @@ class Helper
         print_r($data);
         echo "</pre>";
     }
-    public static function pushNotification($tokens, $notificationData)
+    public static function pushNotification($notifiable, string $title, string $body, array $data = [], ?int $id = null): void
     {
-        if (!empty($tokens)) {
-            if (gettype($tokens) != 'array') {
-                $tokens = [$tokens];
-            }
-        } else {
-            $tokens = [''];
+        // If they passed a class string (e.g., User::class) and an ID, resolve the model instance
+        if (is_string($notifiable) && class_exists($notifiable) && $id !== null) {
+            $notifiable = $notifiable::find($id);
         }
 
-        $data = $notificationData;
-        $fcmNotification = [
-            'registration_ids' => $tokens,
-            //'notification' => $notificationData['data'],
-            'notification' => $notificationData,
-            //'data' => ['data'=> $notificationData]
-        ];
-        $headers = [
-            'Authorization: key=' . env('FCM_API_KEY'),
-            'Content-Type: application/json'
-        ];
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fcmNotification));
-        $result = curl_exec($ch);
-        //pr($result);die;
-        curl_close($ch);
-        return $result;
+        // If the model instance wasn't found or doesn't exist, stop here
+        if (!$notifiable || !method_exists($notifiable, 'fcmTokens')) {
+            return;
+        }
+        
+        app(FcmTokenService::class)->sendToModel(
+            $notifiable,
+            $title,
+            $body,
+            $data
+        );
     }
 
     public static function getAllRmCode()
