@@ -138,7 +138,6 @@ class ApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            //'email' => 'required',
             'mobile' => 'required',
         ]);
 
@@ -150,7 +149,7 @@ class ApiController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'mobile' => $request->mobile,
-            'password' => Hash::make('User123'),
+            'password' => Hash::make('User@123'),
         ]);
 
         $customerData = [

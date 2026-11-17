@@ -32,7 +32,7 @@ class SavingCustomer extends Authenticatable implements JWTSubject
     public function RmDetail()
     {
         return $this->belongsTo(User::class, 'rm_id', 'id');
-    }
+    }   
 
     public function fcmTokens()
     {
