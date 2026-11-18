@@ -426,7 +426,6 @@ class Helper
     {
         $companies =  SavingRm::where('customer_id', $customerId)->groupBy('company_id')->pluck('company_id')->toArray();
         $agents = SavingCompany::whereIn('id', $companies)->get();
-        $agents = SavingCompany::whereIn('id', $companies)->get();
         return $agents;
     }
 

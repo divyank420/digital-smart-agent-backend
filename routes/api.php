@@ -7,9 +7,9 @@ use App\Http\Controllers\Agent\DenominationController;
 use App\Http\Controllers\api\CompanyAccountController;
 use App\Http\Controllers\api\Customer\AuthController;
 use App\Http\Controllers\api\Customer\CustomerApiController;
+use App\Http\Controllers\api\Customer\CustomersController;
 use App\Http\Controllers\api\InstallmentController;
 use App\Http\Controllers\api\RmController;
-use App\Http\Controllers\api\CustomersController;
 use App\Http\Controllers\api\DopController;
 use App\Http\Controllers\api\ReportsController;
 use App\Http\Controllers\api\PdfReportController;
@@ -148,9 +148,8 @@ Route::middleware('cors')->group(function () {
 
 // Customer App Apis
 Route::prefix('customer')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [ApiController::class, 'login']);
-    Route::post('yearly-report-summary', [CustomersController::class, 'yearlyReportSummary']);
+    //Route::post('yearly-report-summary', [CustomersController::class, 'yearlyReportSummary']);
 
     Route::middleware('jwt.verify')->group(function () {
         Route::post('update-password', [CustomerApiController::class, 'updatePassword']);
@@ -158,6 +157,7 @@ Route::prefix('customer')->group(function () {
 
         Route::controller(CustomersController::class)->group(function () {
             Route::get('dashboard', 'dashboard');
+            Route::get('rm-accounts', 'getRmAccounts');
         });
     });
 });

@@ -14,7 +14,8 @@ class CustomersController extends Controller
 {
     public $user;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->user = Auth::guard('customer')->user();
     }
 
@@ -38,13 +39,15 @@ class CustomersController extends Controller
         dd($rms);
     }
 
-    public function yearlyReportSummary(Request $request){
-        $year = $request->year??date('Y');
-        $entries = SavingRmEntries::select('payment_month',DB::raw("sum(amount) amount"),)->where('rm_id',100)->where('payment_year',$year)->groupBy('payment_month')->get();
-        return Helper::sendResponse("Yearly Report",1,$entries);
+    public function yearlyReportSummary(Request $request)
+    {
+        $year = $request->year ?? date('Y');
+        $entries = SavingRmEntries::select('payment_month', DB::raw("sum(amount) amount"),)->where('rm_id', 100)->where('payment_year', $year)->groupBy('payment_month')->get();
+        return Helper::sendResponse("Yearly Report", 1, $entries);
     }
-    public function monthlyReports(Request $request){
-        $entries = SavingRmEntries::select('entry_date',DB::raw("sum(amount) amount"),)->where('rm_id',100)->where(['payment_year'=>2025,'payment_month'=>02])->get();
-        return Helper::sendResponse("Yearly Report",1,$entries);
+    public function monthlyReports(Request $request)
+    {
+        $entries = SavingRmEntries::select('entry_date', DB::raw("sum(amount) amount"),)->where('rm_id', 100)->where(['payment_year' => 2025, 'payment_month' => 02])->get();
+        return Helper::sendResponse("Yearly Report", 1, $entries);
     }
 }
