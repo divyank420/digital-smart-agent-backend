@@ -117,8 +117,13 @@ Route::middleware('cors')->group(function () {
         Route::any('monthly-report', [ReportsController::class, 'monthlyReport']);
         Route::any('days-collection-list', [ReportsController::class, 'daysCollectionList']);
         Route::post('get-entries-report-lists', [RmController::class, 'getEntriesReportList']);
-
+        
         //Route::post('customer-dashboard', [CustomersController::class, 'dashboard']);
+        
+        /* Collection Requests */
+        Route::any('upi-collection-requests', [ApiController::class, 'upiCollectionRequest']);
+
+
         Route::controller(CustomersController::class)->group(function () {
             Route::get('customer-dashboard', 'dashboard')->name('customerDashbaord');
             Route::get('customer-portfolio', 'portfolio')->name('customerPortfolio');

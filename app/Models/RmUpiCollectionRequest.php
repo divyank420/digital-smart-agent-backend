@@ -24,7 +24,7 @@ class RmUpiCollectionRequest extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount' => 'decimal:0',
         'reviewed_at' => 'datetime',
     ];
 

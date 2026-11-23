@@ -130,7 +130,7 @@ class ApiController extends Controller
         if (!$user || ($user->role !== 'Owner' && $user->role !== 'Developer')) {
             $query->where('access_level', 'all');
         }
-        $settings = ['current_version' =>  config('constants.current_version'),'isForceUpdate'=>config('constants.is_force_update')];
+        $settings = ['current_version' =>  config('constants.current_version'), 'isForceUpdate' => config('constants.is_force_update')];
         $settings['config_settings'] = $query->get()->toArray();
 
         return sendResponse('Config settings.', 200, $settings);
@@ -547,38 +547,42 @@ class ApiController extends Controller
         return sendResponse('Config settings updated successfully.', 1, $settings);
     }
 
-    public function getCollectionRequests(Request $request)
+    public function upiCollectionRequest(Request $request)
     {
         $validated = $request->validate([
             'customer_id' => ['nullable', 'integer'],
-            'status' => ['nullable', 'string', 'max:50'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'company_id'  => ['nullable', 'integer'],
+            'status'      => ['nullable', 'string', 'max:50'],
+            'month'       => ['nullable', 'integer', 'between:1,12'],
+            'year'        => ['nullable', 'integer', 'digits:4'],
+            'per_page'    => ['nullable', 'integer', 'between:1,100'],
         ]);
+
+        if (empty($validated['customer_id']) && empty($validated['company_id'])) {
+            return Helper::sendResponse('Either customer_id or company_id is required.', 0, null);
+        }
+
+        $perPage = $validated['per_page'] ?? 15;
 
         $requests = RmUpiCollectionRequest::query()
             ->with(['savingRm', 'savingCustomer', 'savingCompany'])
-            ->when(!empty($validated['company_id']), function ($query) use ($validated) {
-                $query->where('company_id', $validated['company_id']);
-            })
             ->when(!empty($validated['customer_id']), function ($query) use ($validated) {
                 $query->where('customer_id', $validated['customer_id']);
+            }, function ($query) use ($validated) {
+                $query->where('company_id', $validated['company_id']);
             })
             ->when(!empty($validated['status']), function ($query) use ($validated) {
                 $query->where('status', $validated['status']);
             })
+            ->when(!empty($validated['month']), function ($query) use ($validated) {
+                $query->whereMonth('created_at', $validated['month']);
+            })
+            ->when(!empty($validated['year']), function ($query) use ($validated) {
+                $query->whereYear('created_at', $validated['year']);
+            })
             ->latest()
-            ->paginate($validated['per_page'] ?? 15);
+            ->paginate($perPage);
 
-        // Attach full accessible URL for each screenshot
-        $requests->getCollection()->transform(function ($item) {
-            $item->screenshot_url = $item->screenshot_path
-                ? Storage::disk('public')->url($item->screenshot_path)
-                : null;
-
-            return $item;
-        });
-
-        Helper::sendResponse('Collection requests fetched successfully.',1,$requests);
+        return Helper::sendResponse('UPI collection requests fetched successfully.', 1, $requests);
     }
-
 }

@@ -4,9 +4,12 @@ namespace App\Http\Controllers\api\Customer;
 
 use App\Helper\Helper;
 use App\Http\Controllers\Controller;
+use App\Models\FcmToken;
 use App\Models\RmUpiCollectionRequest;
 use App\Models\SavingRm;
 use App\Models\SavingRmEntries;
+use App\Models\User;
+use App\Services\FcmTokenService;
 use App\Services\RmPaymentSummaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -81,14 +84,13 @@ class CustomersController extends Controller
 
     public function createCollectionRequest(Request $request)
     {
-        Log::info('testing', [$request->all()]);
 
         $validated = $request->validate([
             'customer_id' => ['required', 'integer'],
-            'rm_id' => ['required', 'integer', 'exists:saving_rms,id'],
-            'upi_id' => ['required', 'string', 'max:255'],
-            'amount' => ['required', 'numeric', 'min:0.01'],
-            'screenshot' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'rm_id'       => ['required', 'integer', 'exists:saving_rms,id'],
+            'upi_id'      => ['required', 'string', 'max:255'],
+            'amount'      => ['required', 'numeric', 'min:0.01'],
+            'screenshot'  => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
         $rm = SavingRm::findOrFail($validated['rm_id']);
@@ -97,17 +99,53 @@ class CustomersController extends Controller
             ? $request->file('screenshot')->store('upi-collection-screenshots', 'public')
             : null;
 
+        // 1. Create the record FIRST
         $collectionRequest = RmUpiCollectionRequest::create([
-            'company_id' => $rm->company_id,
-            'customer_id' => $rm->customer_id ?? $validated['customer_id'],
-            'rm_id' => $rm->id,
-            'amount' => $validated['amount'],
-            'payee_upi_id' => $validated['upi_id'],
+            'company_id'      => $rm->company_id,
+            'customer_id'     => $rm->customer_id ?? $validated['customer_id'],
+            'rm_id'           => $rm->id,
+            'amount'          => $validated['amount'],
+            'payee_upi_id'    => $validated['upi_id'],
             'screenshot_path' => $screenshotPath,
         ]);
+
+        $userIds = User::where('company_id', $rm->company_id)->pluck('id');
+
+        $tokens = FcmToken::where('tokenable_type', User::class)
+            ->whereIn('tokenable_id', $userIds)
+            ->pluck('token')
+            ->toArray();
+
+        // 3. Send notification safely with stringified data payload
+        if (!empty($tokens)) {
+            try {
+                $formattedAmount = number_format((int) $validated['amount']);
+                $title = 'New UPI Collection Request';
+                $body = "{$rm->name} raised a new collection request of ₹{$formattedAmount}.";
+
+                $notificationData = [
+                    'type'                  => 'upi_collection_request',
+                    'collection_request_id' => (string) $collectionRequest->id,
+                    'rm_id'                 => (string) $rm->id,
+                    'amount'                => (string) $validated['amount'],
+                ];
+
+                app(FcmTokenService::class)->sendToModel(
+                    $tokens,
+                    $title,
+                    $body,
+                    $notificationData
+                );
+            } catch (\Throwable $e) {
+                Log::error('FCM send failed for collection request #' . $collectionRequest->id, [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         $data = $collectionRequest->load(['savingRm', 'savingCustomer', 'savingCompany']);
 
-        Helper::sendResponse('Collection request created successfully.', 1, $data);
+        return Helper::sendResponse('Collection request created successfully.', 1, $data);
     }
 
     public function getCustomerCollectionRequests(Request $request)
@@ -144,6 +182,6 @@ class CustomersController extends Controller
             return $item;
         });
 
-        Helper::sendResponse('Collection requests fetched successfully.',1,$requests);
+        Helper::sendResponse('Collection requests fetched successfully.', 1, $requests);
     }
 }

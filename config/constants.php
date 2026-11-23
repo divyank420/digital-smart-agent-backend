@@ -10,5 +10,10 @@ return [
     ],
     'current_version' => env('APP_CURRENT_VERSION', "2.1.5"),
     'is_force_update' => env('APP_FORCE_UPDATE', true),
+    "notification_models"=>[
+        'agents'=>'App\Models\User',
+        'customers'=>'App\Models\SavingCustomer',
+
+    ]
 ];
 
