@@ -92,6 +92,11 @@ class SavingRm extends Model
         ];
         return $data;
     }
+    public function company()
+    {
+        return $this->belongsTo(SavingCompany::class, 'company_id', 'id');
+    }
+
     public function scopeCompany($query)
     {
         if (Auth::check()) {

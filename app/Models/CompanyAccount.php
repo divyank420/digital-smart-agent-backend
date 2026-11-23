@@ -18,6 +18,8 @@ class CompanyAccount extends Model
         'account_type',
         'opening_balance',
         'current_balance',
+        'is_primary',
+        'upi_id',
         'is_active'
     ];
 

@@ -17,6 +17,9 @@ class CompanyAccountController extends Controller
     {
         $accounts = CompanyAccount::query()
             ->where('company_id', $request->company_id)
+            ->when($request->exists('upi_not_null') || $request->boolean('upi_not_null'), function ($query) {
+                $query->whereNotNull('upi_id');
+            })
             ->get();
         Helper::sendResponse('Accounts fetched successfully', 1, $accounts);
     }
@@ -55,8 +58,7 @@ class CompanyAccountController extends Controller
         } catch (\Exception $e) {
             dd($e->getMessage());
             DB::rollBack();
-            return Helper::sendResponse($e->getMessage(),500);
-            
+            return Helper::sendResponse($e->getMessage(), 500);
         }
     }
 

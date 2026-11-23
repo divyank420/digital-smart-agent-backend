@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanyAccount;
 use App\Models\ConfigSetting;
 use App\Models\DopAgent;
+use App\Models\RmUpiCollectionRequest;
 use App\Models\SavingDenomination;
 use App\Models\SavingCompany;
 use App\Models\SavingCustomer;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
@@ -544,4 +546,39 @@ class ApiController extends Controller
 
         return sendResponse('Config settings updated successfully.', 1, $settings);
     }
+
+    public function getCollectionRequests(Request $request)
+    {
+        $validated = $request->validate([
+            'customer_id' => ['nullable', 'integer'],
+            'status' => ['nullable', 'string', 'max:50'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $requests = RmUpiCollectionRequest::query()
+            ->with(['savingRm', 'savingCustomer', 'savingCompany'])
+            ->when(!empty($validated['company_id']), function ($query) use ($validated) {
+                $query->where('company_id', $validated['company_id']);
+            })
+            ->when(!empty($validated['customer_id']), function ($query) use ($validated) {
+                $query->where('customer_id', $validated['customer_id']);
+            })
+            ->when(!empty($validated['status']), function ($query) use ($validated) {
+                $query->where('status', $validated['status']);
+            })
+            ->latest()
+            ->paginate($validated['per_page'] ?? 15);
+
+        // Attach full accessible URL for each screenshot
+        $requests->getCollection()->transform(function ($item) {
+            $item->screenshot_url = $item->screenshot_path
+                ? Storage::disk('public')->url($item->screenshot_path)
+                : null;
+
+            return $item;
+        });
+
+        Helper::sendResponse('Collection requests fetched successfully.',1,$requests);
+    }
+
 }

@@ -20,7 +20,7 @@ class CustomersController extends Controller
     }
 
     public function dashboard(Request $request){
-        $rms_accounts = SavingRm::where('customer_id',$this->user->id)->pluck('id');
+        $rms_accounts = SavingRm::with('customer','company')->where('customer_id',$this->user->id)->pluck('id');
         //Helper::pushNotification($this->user,'Hello',"tetse");
         $accounts_total = SavingRmEntries::with(['RmDetail:id,name,rm_code,monthly_amount,installment_amount'])->select([
             'rm_id',

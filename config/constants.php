@@ -9,6 +9,6 @@ return [
         'COMPLETED' => 'Completed Successfully',
     ],
     'current_version' => env('APP_CURRENT_VERSION', "2.1.5"),
-    'is_force_update' => env('APP_FORCE_UPDATE', true)
+    'is_force_update' => env('APP_FORCE_UPDATE', true),
 ];
 

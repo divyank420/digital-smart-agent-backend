@@ -158,6 +158,8 @@ Route::prefix('customer')->group(function () {
         Route::controller(CustomersController::class)->group(function () {
             Route::get('dashboard', 'dashboard');
             Route::get('rm-accounts', 'getRmAccounts');
+            Route::get('rm-detail', 'getRmDetail');
+            Route::post('create-collection-request', 'createCollectionRequest');
         });
     });
 });
